@@ -6,6 +6,8 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from decimal import Decimal
 from dotenv import load_dotenv
 
+print("Checking ODBC drivers...")
+os.system("odbcinst -q -d")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "your_fallback_secret")  # 환경 변수에서 가져오고, 없으면 기본값 사용
