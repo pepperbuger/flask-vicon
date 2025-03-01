@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>현장코드 조회</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+</head>
+
+<body class="container mt-5">
+    <h1 class="mb-4">🏗️ 현장코드 조회</h1>
+
+    <form method="post">
+        <div class="mb-3">
+            <label for="site_code" class="form-label">현장코드를 입력하세요:</label>
+            <input type="text" class="form-control" id="site_code" name="site_code" placeholder="예: 현대인천청라(D)">
+        </div>
+        <button type="submit" class="btn btn-primary">조회</button>
+    </form>
+
+    <br>
+    <a href="{{ url_for('logout') }}" class="btn btn-danger">로그아웃</a>
+
+    {% if data %}
+    <div class="mt-5">
+        <!-- ✅ 요약 정보 -->
+        <h2>📋 요약 정보</h2>
+        <ul class="list-group mb-4">
+            <li class="list-group-item"><strong>현장코드:</strong> {{ data.summary.SiteCode }}</li>
+            <li class="list-group-item"><strong>현장명:</strong> {{ data.summary.SiteName }}</li>
+            <li class="list-group-item"><strong>계약물량:</strong> {{ "{:,.0f}".format(data.summary.Quantity) }} ㎡</li>
+            <li class="list-group-item"><strong>계약금액:</strong> {{ "{:,.0f}".format(data.summary.ContractAmount) }} 원</li>
+        </ul>
+
+        <!-- ✅ 1. 자재비 -->
+        <h2>🏗️ 1. 자재비</h2>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>TG타입</th>
+                    <th>수량 (㎡)</th>
+                    <th>단가 (원/㎡)</th>
+                    <th>금액 (원)</th>
+                    <th>출고시작월</th>
+                    <th>출고종료월</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data.material %}
+                <tr>
+                    <td>{{ row.TGType }}</td>
+                    <td>{{ "{:,.0f}".format(row.TotalQuantity) }}</td>
+                    <td>{{ "{:,.0f}".format(row.TotalAmount / row.TotalQuantity) if row.TotalQuantity else '-' }}</td>
+                    <td>{{ "{:,.0f}".format(row.TotalAmount) }}</td>
+                    <td>{{ row.StartMonth }}</td>
+                    <td>{{ row.EndMonth }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <!-- ✅ 자재비 합계 -->
+            <tfoot>
+                <tr>
+                    <td><strong>소계</strong></td>
+                    <td><strong>{{ "{:,.0f}".format(data.get('material_total', {}).get('total_quantity', 0)) }}</strong></td>
+                    <td>-</td>
+                    <td><strong>{{ "{:,.0f}".format(data.get('material_total', {}).get('total_amount', 0)) }}</strong></td>
+                    <td><strong>{{ data.get('material_total', {}).get('start_month', '-') }}</strong></td>
+                    <td><strong>{{ data.get('material_total', {}).get('end_month', '-') }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- ✅ 2. 부자재비 -->
+        <h2>🔩 2. 부자재비</h2>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>타입</th>
+                    <th>수량</th>
+                    <th>단가 (원)</th>
+                    <th>금액 (원)</th>
+                    <th>구매시작월</th>
+                    <th>구매종료월</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data.submaterial %}
+                <tr>
+                    <td>{{ row.SubmaterialType }}</td>
+                    <td>{{ "{:,.0f}".format(row.TotalQuantity) }}</td>
+                    <td>{{ "{:,.0f}".format(row.AvgPrice) }}</td>
+                    <td>{{ "{:,.0f}".format(row.TotalAmount) }}</td>
+                    <td>{{ row.StartMonth }}</td>
+                    <td>{{ row.EndMonth }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <!-- ✅ 부자재비 합계 -->
+            <tfoot>
+                <tr>
+                    <td><strong>소계</strong></td>
+                    <td><strong>{{ "{:,.0f}".format(data.get('submaterial_total', {}).get('total_quantity', 0)) }}</strong></td>
+                    <td>-</td>
+                    <td><strong>{{ "{:,.0f}".format(data.get('submaterial_total', {}).get('total_amount', 0)) }}</strong></td>
+                    <td><strong>{{ data.get('submaterial_total', {}).get('start_month', '-') }}</strong></td>
+                    <td><strong>{{ data.get('submaterial_total', {}).get('end_month', '-') }}</strong></td>
+                </tr>
+            </tfoot>            
+        </table>
+
+        <!-- ✅ 3. 현장상세조회 -->
+        <!-- 현장상세조회 -->
+        {% if data.details %}
+        <table class="table table-bordered table-striped">
+            <thead>
+                 <tr>
+                    <th>현장코드</th>
+                    <th>TGType</th>
+                    <th>연도</th>
+                    <th>출고수량 (㎡)</th>
+                    <th>금액 (원)</th>
+                    <th>단가 (원/㎡)</th>
+                 </tr>
+             </thead>
+             <tbody>
+                  {% for row in data.details %}
+                  <tr>
+                    <td>{{ row.SiteCode }}</td>
+                    <td>{{ row.TGType }}</td>
+                    <td>{{ row.Month }}</td>
+                    <td>{{ "{:,.2f}".format(row.ShipmentQuantity) }}</td>
+                    <td>{{ "{:,.0f}".format(row.Amount) }}</td>
+                    <td>{{ "{:,.0f}".format(row.Price) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>📌 현장상세조회 데이터가 없습니다.</p>
+        {% endif %}
+     </div>
+     {% endif %}   
+</body>
+</html>
