@@ -1,18 +1,13 @@
 # ✅ 1. Python 3.9 환경 기반
 FROM python:3.9
 
-# ✅ 2. MSSQL ODBC 드라이버 및 필수 패키지 설치
-RUN apt-get update && apt-get install -y \
-    curl \
-    unixodbc \
-    unixodbc-dev \
-    odbcinst \
-    libodbc1 \
-    odbcinst1debian2 && \
-    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+# ✅ MSSQL ODBC 드라이버 설치
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
     curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
-    apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql17 && \
-    rm -rf /var/lib/apt/lists/*  # ✅ 불필요한 캐시 삭제 (용량 최적화)
+    apt-get update && \
+    ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc unixodbc-dev
+
+RUN odbcinst -q -d
 
 # ✅ 3. ODBC 드라이버 설정
 ENV ODBCINI=/etc/odbc.ini

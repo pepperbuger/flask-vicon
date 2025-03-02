@@ -242,4 +242,7 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    print("⚠️ 이 파일은 직접 실행하지 말고 Gunicorn을 사용하세요!")
+    from gunicorn.app.wsgiapp import run
+    import sys
+    sys.argv = ['gunicorn', '--workers=2', '--timeout=120', 'app:app']
+    run()
