@@ -9,6 +9,10 @@ from dotenv import load_dotenv
 import werkzeug
 print("🚀 Attempting to connect to the database...")
 
+port = int(os.environ.get("PORT", 8080))
+app.run(host="0.0.0.0", port=port)
+
+
 try:
     conn = pyodbc.connect(conn_str)
     print("✅ Successfully connected to the database!")
@@ -17,7 +21,6 @@ except Exception as e:
 
 load_dotenv()  # .env 파일 로드
 
-import pyodbc
 print("✅ pyodbc is successfully installed and imported!")
 
 
