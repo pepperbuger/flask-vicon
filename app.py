@@ -9,9 +9,6 @@ from dotenv import load_dotenv
 import werkzeug
 print("🚀 Attempting to connect to the database...")
 
-port = int(os.environ.get("PORT", 8080))
-app.run(host="0.0.0.0", port=port)
-
 
 try:
     conn = pyodbc.connect(conn_str)
@@ -38,12 +35,6 @@ print(f"🔍 DBNAME: {DBNAME}")
 print(f"🔍 DBUSER: {DBUSER}")
 print(f"🔍 USERS: {USERS}")
 
-
-# ✅ 로그 확인 (배포 후 "View Logs"에서 확인 가능!)
-print(f"🔍 Loaded DBHOST: {DBHOST}")
-print(f"🔍 Loaded DBNAME: {DBNAME}")
-print(f"🔍 Loaded DBUSER: {DBUSER}")
-print(f"🔍 Loaded USERS: {USERS}")
 
 # ✅ 설치된 ODBC 드라이버 목록 확인
 print("🔍 Checking available ODBC drivers in Python...")
@@ -144,8 +135,6 @@ DBPASSWORD = os.getenv("DBPASSWORD")
 DBHOST = os.getenv("DBHOST")
 DBNAME = os.getenv("DBNAME")
 
-# Flask DB 연결
-conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};Server=tcp:{DBHOST},1433;DATABASE={DBNAME};UID={DBUSER};PWD={DBPASSWORD};Encrypt=yes;TrustServerCertificate=no;"
 
 
 # ✅ 데이터베이스 연결 문자열
@@ -266,6 +255,5 @@ def index():
 if __name__ == '__main__':
     from gunicorn.app.wsgiapp import run
     import sys
-    sys.argv = ['gunicorn', '--workers=1', '--timeout=60', 'app:app']
+    sys.argv = ['gunicorn', '--workers=2', '--timeout=120', 'app:app']
     run()
-

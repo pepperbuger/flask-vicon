@@ -1,55 +1,42 @@
-# ✅ 1. Python 3.9 환경을 기반으로 사용
+# ✅ 1. Python 3.9 환경 기반
 FROM python:3.9
 
-# ✅ MSSQL ODBC 드라이버 설치
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-    curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
-    apt-get update && \
-    ACCEPT_EULA=Y apt-get install -y msodbcsql17
-	
-RUN odbcinst -q -d
-
-ENV ODBCINI=/etc/odbc.ini
-ENV ODBCSYSINI=/etc
-ENV LD_LIBRARY_PATH=/opt/microsoft/msodbcsql17/lib64:/usr/lib:/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
-
-	
-	
-# ✅ ODBC 드라이버 설정 추가
-RUN echo "[MSSQL]" > /etc/odbc.ini && \
-    echo "Driver=ODBC Driver 17 for SQL Server" >> /etc/odbc.ini && \
-    echo "Server=tcp:${DBHOST},1433" >> /etc/odbc.ini && \
-    echo "Database=${DBNAME}" >> /etc/odbc.ini && \
-    echo "UID=${DBUSER}" >> /etc/odbc.ini && \
-    echo "PWD=${DBPASSWORD}" >> /etc/odbc.ini && \
-    echo "Encrypt=yes" >> /etc/odbc.ini && \
-    echo "TrustServerCertificate=no" >> /etc/odbc.ini
-
-
-# ✅ 2. ODBC 라이브러리 및 필수 패키지 설치
+# ✅ 2. MSSQL ODBC 드라이버 및 필수 패키지 설치
 RUN apt-get update && apt-get install -y \
+    curl \
     unixodbc \
     unixodbc-dev \
     odbcinst \
     libodbc1 \
-    odbcinst1debian2 \
-    curl
+    odbcinst1debian2 && \
+    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+    curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql17 && \
+    rm -rf /var/lib/apt/lists/*  # ✅ 불필요한 캐시 삭제 (용량 최적화)
 
-# ✅ 3. 작업 디렉토리 설정
+# ✅ 3. ODBC 드라이버 설정
+ENV ODBCINI=/etc/odbc.ini
+ENV ODBCSYSINI=/etc
+ENV LD_LIBRARY_PATH=/opt/microsoft/msodbcsql17/lib64:/usr/lib:/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+
+# ✅ 4. 작업 디렉토리 설정
 WORKDIR /app
 
-# ✅ 4. 프로젝트 코드 복사 (현재 폴더에 있는 모든 파일을 컨테이너로 복사)
+# ✅ 5. 프로젝트 파일 복사
 COPY . /app
 
-# ✅ 5. Python 패키지 설치 전에 pip 업그레이드 추가
+# ✅ 6. Python 패키지 설치 전에 pip 업그레이드
 RUN pip install --upgrade pip
 
-
-# ✅ 6. Python 패키지 설치
+# ✅ 7. requirements.txt 먼저 복사 후 설치 (캐싱 최적화)
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ✅ 6. ODBC 드라이버가 정상적으로 설치되었는지 확인 (디버깅용 로그 출력)
-RUN ldconfig -p | grep odbc
+# ✅ 8. ODBC 드라이버 정상 설치 확인
+RUN odbcinst -q -d && ldconfig -p | grep odbc
 
-# ✅ 7. Flask 애플리케이션 실행
-CMD ["gunicorn", "-b", "0.0.0.0:5001", "app:app"]
+# ✅ 9. Gunicorn 실행을 위한 포트 설정
+EXPOSE 8080
+
+# ✅ 10. 컨테이너 실행 시 start.sh 실행 (Gunicorn 실행 포함)
+CMD ["sh", "start.sh"]
