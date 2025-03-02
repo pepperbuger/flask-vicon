@@ -7,12 +7,19 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
     apt-get update && \
     ACCEPT_EULA=Y apt-get install -y msodbcsql17
 	
+RUN odbcinst -q -d
+	
 	
 # ✅ ODBC 드라이버 설정 추가
-RUN echo "[ODBC Driver 17 for SQL Server]" > /etc/odbcinst.ini && \
-    echo "Description=Microsoft ODBC Driver 17 for SQL Server" >> /etc/odbcinst.ini && \
-    echo "Driver=/opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.so" >> /etc/odbcinst.ini && \
-    echo "UsageCount=1" >> /etc/odbcinst.ini
+RUN echo "[MSSQL]" > /etc/odbc.ini && \
+    echo "Driver=ODBC Driver 17 for SQL Server" >> /etc/odbc.ini && \
+    echo "Server=tcp:${DBHOST},1433" >> /etc/odbc.ini && \
+    echo "Database=${DBNAME}" >> /etc/odbc.ini && \
+    echo "UID=${DBUSER}" >> /etc/odbc.ini && \
+    echo "PWD=${DBPASSWORD}" >> /etc/odbc.ini && \
+    echo "Encrypt=yes" >> /etc/odbc.ini && \
+    echo "TrustServerCertificate=no" >> /etc/odbc.ini
+
 
 # ✅ 2. ODBC 라이브러리 및 필수 패키지 설치
 RUN apt-get update && apt-get install -y \
