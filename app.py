@@ -7,8 +7,35 @@ from decimal import Decimal
 from dotenv import load_dotenv
 # Flask-Login과 최신 Werkzeug 호환성 문제 해결
 import werkzeug
-print("🚀 Attempting to connect to the database...")
 
+load_dotenv()  # .env 파일 로드
+
+
+# ✅ Environment variables setup
+DBHOST = os.environ.get("DBHOST", "MISSING_DBHOST")
+DBNAME = os.environ.get("DBNAME", "MISSING_DBNAME")
+DBUSER = os.environ.get("DBUSER", "MISSING_DBUSER")
+DBPASSWORD = os.environ.get("DBPASSWORD", "MISSING_DBPASSWORD")
+USERS = os.environ.get("USERS", "MISSING_USERS")
+
+# ✅ Connection string setup
+conn_str = (
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    f"Server=tcp:{DBHOST},1433;"
+    f"DATABASE={DBNAME};"
+    f"UID={DBUSER};"
+    f"PWD={DBPASSWORD};"
+    "Encrypt=yes;"
+    "TrustServerCertificate=yes;"
+    "Connection Timeout=30;"
+)    
+
+
+# ✅ 환경 변수 값 확인
+print(f"🔍 DBHOST: {DBHOST}")
+print(f"🔍 DBNAME: {DBNAME}")
+print(f"🔍 DBUSER: {DBUSER}")
+print(f"🔍 USERS: {USERS}")
 
 try:
     conn = pyodbc.connect(conn_str)
@@ -16,24 +43,6 @@ try:
 except Exception as e:
     print("❌ Database connection failed:", e)
 
-load_dotenv()  # .env 파일 로드
-
-print("✅ pyodbc is successfully installed and imported!")
-
-
-# ✅ 환경 변수 값 직접 로드
-# ✅ os.getenv() 대신 os.environ.get() 사용
-DBHOST = os.environ.get("DBHOST", "MISSING_DBHOST")
-DBNAME = os.environ.get("DBNAME", "MISSING_DBNAME")
-DBUSER = os.environ.get("DBUSER", "MISSING_DBUSER")
-DBPASSWORD = os.environ.get("DBPASSWORD", "MISSING_DBPASSWORD")
-USERS = os.environ.get("USERS", "MISSING_USERS")
-
-# ✅ 환경 변수 값 확인
-print(f"🔍 DBHOST: {DBHOST}")
-print(f"🔍 DBNAME: {DBNAME}")
-print(f"🔍 DBUSER: {DBUSER}")
-print(f"🔍 USERS: {USERS}")
 
 
 # ✅ 설치된 ODBC 드라이버 목록 확인
@@ -129,26 +138,6 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-
-DBUSER = os.getenv("DBUSER")
-DBPASSWORD = os.getenv("DBPASSWORD")
-DBHOST = os.getenv("DBHOST")
-DBNAME = os.getenv("DBNAME")
-
-
-
-# ✅ 데이터베이스 연결 문자열
-conn_str = (
-    "DRIVER={ODBC Driver 17 for SQL Server};"
-    f"Server=tcp:{DBHOST},1433;"
-    f"DATABASE={DBNAME};"
-    f"UID={DBUSER};"
-    f"PWD={DBPASSWORD};"
-    "Encrypt=yes;"
-    "TrustServerCertificate=yes;"
-    "Connection Timeout=30;"
-)
-print("🚀 Attempting to connect with:", conn_str)
 
 try:
     conn = pyodbc.connect(conn_str)
