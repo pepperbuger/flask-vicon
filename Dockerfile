@@ -1,6 +1,11 @@
 # ✅ 1. Python 3.9 환경을 기반으로 사용
 FROM python:3.9
 
+# ✅ MSSQL ODBC 드라이버 설치
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+    curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && \
+    ACCEPT_EULA=Y apt-get install -y msodbcsql17
 
 
 
