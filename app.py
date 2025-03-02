@@ -45,16 +45,6 @@ except Exception as e:
     conn = None  # 🚨 연결 실패 시 None으로 설정
 
 
-
-# ✅ 설치된 ODBC 드라이버 목록 확인
-print("🔍 Checking available ODBC drivers in Python...")
-print(pyodbc.drivers())  # 설치된 ODBC 드라이버 목록 출력
-
-# ✅ 환경 변수 확인
-print("🔍 Loaded USERS:", repr(os.getenv("USERS")))  # 🚀 USERS 값 확인
-print("🔍 All ENV Variables:", os.environ)  # 🚀 실행 환경에서 모든 환경 변수 출력
-
-
 # ✅ Flask 설정
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "your_fallback_secret")  # 환경 변수에서 가져오고, 없으면 기본값 사용
@@ -67,10 +57,8 @@ os.system("odbcinst -q -d")
 # ✅ 현재 실행 중인 환경 변수 출력 (디버깅)
 print("All ENV Variables:", os.environ)  # 🚀 모든 환경 변수를 출력해서 USERS가 포함되었는지 확인
 
-@app.route("/dashboard")
-@login_required
-def index():
-    return render_template('index.html')
+
+
 
 
 # ✅ 사용자 계정 로드 함수
@@ -88,6 +76,12 @@ def load_users_from_env():
 # ✅ .env에서 불러온 사용자 계정 적용
 users = load_users_from_env()
 
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template('index.html')
+
+
 # ✅ users 딕셔너리가 올바르게 만들어졌는지 확인
 print("Loaded users:", users)  # 🚀 배포 후 "View Logs"에서 확인
 
@@ -100,21 +94,6 @@ login_manager.login_view = 'login'
 class User(UserMixin):
     def __init__(self, id):
         self.id = id
-
-# ✅ 로그인 가능한 사용자 목록 (팀원 ID 등록)
-def load_users_from_env():
-    users_str = os.getenv("USERS", "")  # .env에서 USERS 환경 변수 가져오기
-    users = {}  # 빈 딕셔너리 생성
-
-    if users_str:
-        for pair in users_str.split(","):
-            parts = pair.split(":")
-            if len(parts) == 2:
-                username, password = parts
-                users[username.strip()] = password.strip()
-
-    print("Parsed USERS dict:", users)  # 🚀 변환된 딕셔너리 확인
-    return users
 
 
 @login_manager.user_loader
@@ -258,10 +237,6 @@ def index():
     return render_template('index.html')
 
 
-
-@app.route("/")
-def home():
-    return "Hello, Railway!"
 
 # 🚀 Gunicorn이 실행될 때 app 객체를 직접 실행
 
