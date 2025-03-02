@@ -5,6 +5,10 @@ import os
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from decimal import Decimal
 from dotenv import load_dotenv
+# Flask-Login과 최신 Werkzeug 호환성 문제 해결
+import werkzeug
+werkzeug.url_decode = werkzeug.urls.url_parse
+
 
 print("Checking ODBC drivers...")
 os.system("odbcinst -q -d")
