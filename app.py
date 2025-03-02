@@ -11,7 +11,8 @@ import werkzeug
 load_dotenv()  # .env 파일 로드
 
 # ✅ 설치된 ODBC 드라이버 목록 확인
-print("🔍 Available ODBC Drivers:", pyodbc.drivers())
+print("🔍 Checking available ODBC drivers in Python...")
+print(pyodbc.drivers())  # 설치된 ODBC 드라이버 목록 출력
 
 # ✅ 환경 변수 확인
 print("🔍 Loaded USERS:", repr(os.getenv("USERS")))  # 🚀 USERS 값 확인
@@ -123,7 +124,13 @@ conn_str = (
     "TrustServerCertificate=yes;"
     "Connection Timeout=30;"
 )
+print("🚀 Attempting to connect with:", conn_str)
 
+try:
+    conn = pyodbc.connect(conn_str)
+    print("✅ Successfully connected to the database!")
+except Exception as e:
+    print("❌ Database connection failed:", e)
 
 # ✅ 데이터 조회 함수 (기존 코드 유지)
 def query_database(site_code):

@@ -8,6 +8,11 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
     ACCEPT_EULA=Y apt-get install -y msodbcsql17
 	
 RUN odbcinst -q -d
+
+ENV ODBCINI=/etc/odbc.ini
+ENV ODBCSYSINI=/etc
+ENV LD_LIBRARY_PATH=/opt/microsoft/msodbcsql17/lib64:/usr/lib:/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+
 	
 	
 # ✅ ODBC 드라이버 설정 추가
