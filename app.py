@@ -11,11 +11,19 @@ import werkzeug
 load_dotenv()  # .env 파일 로드
 
 # ✅ 환경 변수 값 직접 로드
-DBHOST = os.getenv("DBHOST", "None")
-DBNAME = os.getenv("DBNAME", "None")
-DBUSER = os.getenv("DBUSER", "None")
-DBPASSWORD = os.getenv("DBPASSWORD", "None")
-USERS = os.getenv("USERS", "None")
+# ✅ os.getenv() 대신 os.environ.get() 사용
+DBHOST = os.environ.get("DBHOST", "MISSING_DBHOST")
+DBNAME = os.environ.get("DBNAME", "MISSING_DBNAME")
+DBUSER = os.environ.get("DBUSER", "MISSING_DBUSER")
+DBPASSWORD = os.environ.get("DBPASSWORD", "MISSING_DBPASSWORD")
+USERS = os.environ.get("USERS", "MISSING_USERS")
+
+# ✅ 환경 변수 값 확인
+print(f"🔍 DBHOST: {DBHOST}")
+print(f"🔍 DBNAME: {DBNAME}")
+print(f"🔍 DBUSER: {DBUSER}")
+print(f"🔍 USERS: {USERS}")
+
 
 # ✅ 로그 확인 (배포 후 "View Logs"에서 확인 가능!)
 print(f"🔍 Loaded DBHOST: {DBHOST}")
