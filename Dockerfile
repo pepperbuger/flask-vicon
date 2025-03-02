@@ -30,4 +30,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN ldconfig -p | grep odbc
 
 # ✅ 7. Flask 애플리케이션 실행
-CMD ["python", "app.py"]
+CMD ["gunicorn", "-b", "0.0.0.0:5001", "app:app"]
