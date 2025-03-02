@@ -7,7 +7,14 @@ from decimal import Decimal
 from dotenv import load_dotenv
 # Flask-Login과 최신 Werkzeug 호환성 문제 해결
 import werkzeug
+print("🚀 Attempting to connect to the database...")
 
+try:
+    conn = pyodbc.connect(conn_str)
+    print("✅ Successfully connected to the database!")
+except Exception as e:
+    print("❌ Database connection failed:", e)
+    
 load_dotenv()  # .env 파일 로드
 
 # ✅ 환경 변수 값 직접 로드
