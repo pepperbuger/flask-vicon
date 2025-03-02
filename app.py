@@ -10,6 +10,9 @@ import werkzeug
 
 load_dotenv()  # .env 파일 로드
 
+# ✅ 설치된 ODBC 드라이버 목록 확인
+print("🔍 Available ODBC Drivers:", pyodbc.drivers())
+
 # ✅ 환경 변수 확인
 print("🔍 Loaded USERS:", repr(os.getenv("USERS")))  # 🚀 USERS 값 확인
 print("🔍 All ENV Variables:", os.environ)  # 🚀 실행 환경에서 모든 환경 변수 출력
@@ -111,14 +114,16 @@ conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};Server=tcp:{DBHOST},1433;D
 
 # ✅ 데이터베이스 연결 문자열
 conn_str = (
-    'DRIVER={ODBC Driver 17 for SQL Server};'
-    'Server=tcp:flask-sql-server-vicon.database.windows.net,1433;'
-    'DATABASE=vicon;'
-    'UID=flaskadmin;'
-    'PWD=sungji0304!;'
-    'Encrypt=yes;'
-    'TrustServerCertificate=no;'
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    f"Server=tcp:{DBHOST},1433;"
+    f"DATABASE={DBNAME};"
+    f"UID={DBUSER};"
+    f"PWD={DBPASSWORD};"
+    "Encrypt=yes;"
+    "TrustServerCertificate=yes;"
+    "Connection Timeout=30;"
 )
+
 
 # ✅ 데이터 조회 함수 (기존 코드 유지)
 def query_database(site_code):
