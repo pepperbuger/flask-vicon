@@ -14,8 +14,12 @@ try:
     print("✅ Successfully connected to the database!")
 except Exception as e:
     print("❌ Database connection failed:", e)
-    
+
 load_dotenv()  # .env 파일 로드
+
+import pyodbc
+print("✅ pyodbc is successfully installed and imported!")
+
 
 # ✅ 환경 변수 값 직접 로드
 # ✅ os.getenv() 대신 os.environ.get() 사용
