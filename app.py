@@ -250,4 +250,8 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    from gunicorn.app.wsgiapp import run
+    import sys
+    sys.argv = ['gunicorn', '--workers=1', '--timeout=60', 'app:app']
+    run()
+
