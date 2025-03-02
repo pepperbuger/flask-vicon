@@ -7,21 +7,23 @@ from decimal import Decimal
 from dotenv import load_dotenv
 # Flask-Login과 최신 Werkzeug 호환성 문제 해결
 import werkzeug
-werkzeug.url_decode = werkzeug.urls.url_parse
-
-print("Loaded USERS:", os.getenv("USERS"))
-print("Checking ODBC drivers...")
-os.system("odbcinst -q -d")
 
 load_dotenv()  # .env 파일 로드
 
 
+# ✅ Flask 설정
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "your_fallback_secret")  # 환경 변수에서 가져오고, 없으면 기본값 사용
+
+# ✅ 환경 변수 확인 로그
+print("Loaded USERS:", os.getenv("USERS"))
+print("Checking ODBC drivers...")
+os.system("odbcinst -q -d")
 
 # ✅ 현재 실행 중인 환경 변수 출력 (디버깅)
 print("All ENV Variables:", os.environ)  # 🚀 모든 환경 변수를 출력해서 USERS가 포함되었는지 확인
 
+# ✅ 사용자 계정 로드 함수
 def load_users_from_env():
     users_str = os.getenv("USERS", "")  # 환경 변수에서 USERS 가져오기
     users = {}  # 빈 딕셔너리 생성
@@ -39,15 +41,6 @@ users = load_users_from_env()
 # ✅ users 딕셔너리가 올바르게 만들어졌는지 확인
 print("Loaded users:", users)  # 🚀 배포 후 "View Logs"에서 확인
 
-
-DBUSER = os.getenv("DBUSER")
-DBPASSWORD = os.getenv("DBPASSWORD")
-DBHOST = os.getenv("DBHOST")
-DBNAME = os.getenv("DBNAME")
-
-# Flask DB 연결
-conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};Server=tcp:{DBHOST},1433;DATABASE={DBNAME};UID={DBUSER};PWD={DBPASSWORD};Encrypt=yes;TrustServerCertificate=no;"
-
 # ✅ Flask-Login 설정
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -64,14 +57,14 @@ def load_users_from_env():
     users = {}  # 빈 딕셔너리 생성
 
     if users_str:
-        # "vicon:0304,sungji:0304,admin:admin123" -> {'vicon': '0304', 'sungji': '0304', 'admin': 'admin123'}
         for pair in users_str.split(","):
-            username, password = pair.split(":")
-            users[username.strip()] = password.strip()  # 양쪽 공백 제거 후 저장
-    return users
+            parts = pair.split(":")
+            if len(parts) == 2:
+                username, password = parts
+                users[username.strip()] = password.strip()
 
-# ✅ .env에서 불러온 사용자 계정 적용
-users = load_users_from_env()
+    print("Parsed USERS dict:", users)  # 🚀 변환된 딕셔너리 확인
+    return users
 
 
 @login_manager.user_loader
@@ -101,6 +94,16 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+
+DBUSER = os.getenv("DBUSER")
+DBPASSWORD = os.getenv("DBPASSWORD")
+DBHOST = os.getenv("DBHOST")
+DBNAME = os.getenv("DBNAME")
+
+# Flask DB 연결
+conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};Server=tcp:{DBHOST},1433;DATABASE={DBNAME};UID={DBUSER};PWD={DBPASSWORD};Encrypt=yes;TrustServerCertificate=no;"
+
 
 # ✅ 데이터베이스 연결 문자열
 conn_str = (
