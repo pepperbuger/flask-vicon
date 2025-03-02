@@ -10,6 +10,7 @@ import werkzeug
 
 load_dotenv()  # .env 파일 로드
 
+# ✅ 환경 변수 확인
 print("🔍 Loaded USERS:", repr(os.getenv("USERS")))  # 🚀 USERS 값 확인
 print("🔍 All ENV Variables:", os.environ)  # 🚀 실행 환경에서 모든 환경 변수 출력
 
