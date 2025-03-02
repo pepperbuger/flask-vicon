@@ -42,6 +42,7 @@ try:
     print("✅ Successfully connected to the database!")
 except Exception as e:
     print("❌ Database connection failed:", e)
+    conn = None  # 🚨 연결 실패 시 None으로 설정
 
 
 
