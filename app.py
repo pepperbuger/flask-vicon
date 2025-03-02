@@ -66,9 +66,11 @@ os.system("odbcinst -q -d")
 # ✅ 현재 실행 중인 환경 변수 출력 (디버깅)
 print("All ENV Variables:", os.environ)  # 🚀 모든 환경 변수를 출력해서 USERS가 포함되었는지 확인
 
-@app.route("/")
-def home():
-    return "Hello, Railway!"
+@app.route("/dashboard")
+@login_required
+def index():
+    return render_template('index.html')
+
 
 # ✅ 사용자 계정 로드 함수
 def load_users_from_env():
