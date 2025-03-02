@@ -13,10 +13,14 @@ print("Loaded USERS:", os.getenv("USERS"))
 print("Checking ODBC drivers...")
 os.system("odbcinst -q -d")
 
+load_dotenv()  # .env 파일 로드
+
+
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "your_fallback_secret")  # 환경 변수에서 가져오고, 없으면 기본값 사용
 
-load_dotenv()  # .env 파일 로드
+# ✅ 현재 실행 중인 환경 변수 출력 (디버깅)
+print("All ENV Variables:", os.environ)  # 🚀 모든 환경 변수를 출력해서 USERS가 포함되었는지 확인
 
 def load_users_from_env():
     users_str = os.getenv("USERS", "")  # 환경 변수에서 USERS 가져오기
