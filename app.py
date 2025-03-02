@@ -66,6 +66,10 @@ os.system("odbcinst -q -d")
 # ✅ 현재 실행 중인 환경 변수 출력 (디버깅)
 print("All ENV Variables:", os.environ)  # 🚀 모든 환경 변수를 출력해서 USERS가 포함되었는지 확인
 
+@app.route("/")
+def home():
+    return "Hello, Railway!"
+
 # ✅ 사용자 계정 로드 함수
 def load_users_from_env():
     users_str = os.getenv("USERS", "")  # 환경 변수에서 USERS 가져오기
@@ -139,11 +143,20 @@ def logout():
     return redirect(url_for('login'))
 
 
-try:
-    conn = pyodbc.connect(conn_str)
-    print("✅ Successfully connected to the database!")
-except Exception as e:
-    print("❌ Database connection failed:", e)
+def get_db_connection():
+    try:
+        return pyodbc.connect(conn_str)
+    except Exception as e:
+        print("❌ Database connection failed:", e)
+        return None  # 연결 실패 시 None 반환
+
+@app.route("/")
+def home():
+    conn = get_db_connection()
+    if conn is None:
+        return "❌ Database connection failed", 500
+    return "Hello, Railway! 🚀"
+
 
 # ✅ 데이터 조회 함수 (기존 코드 유지)
 def query_database(site_code):
