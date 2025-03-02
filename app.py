@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import werkzeug
 werkzeug.url_decode = werkzeug.urls.url_parse
 
-
+print("Loaded USERS:", os.getenv("USERS"))
 print("Checking ODBC drivers...")
 os.system("odbcinst -q -d")
 
@@ -17,6 +17,24 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "your_fallback_secret")  # 환경 변수에서 가져오고, 없으면 기본값 사용
 
 load_dotenv()  # .env 파일 로드
+
+def load_users_from_env():
+    users_str = os.getenv("USERS", "")  # 환경 변수에서 USERS 가져오기
+    users = {}  # 빈 딕셔너리 생성
+
+    if users_str:
+        # "vicon:0304,sungji:0304,admin:admin123" -> {'vicon': '0304', 'sungji': '0304', 'admin': 'admin123'}
+        for pair in users_str.split(","):
+            username, password = pair.split(":")
+            users[username.strip()] = password.strip()  # 양쪽 공백 제거 후 저장
+    return users
+
+# ✅ .env에서 불러온 사용자 계정 적용
+users = load_users_from_env()
+
+# ✅ users 딕셔너리가 올바르게 만들어졌는지 확인
+print("Loaded users:", users)  # 🚀 배포 후 "View Logs"에서 확인
+
 
 DBUSER = os.getenv("DBUSER")
 DBPASSWORD = os.getenv("DBPASSWORD")
