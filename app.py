@@ -10,6 +10,19 @@ import werkzeug
 
 load_dotenv()  # .env 파일 로드
 
+# ✅ 환경 변수 값 직접 로드
+DBHOST = os.getenv("DBHOST", "None")
+DBNAME = os.getenv("DBNAME", "None")
+DBUSER = os.getenv("DBUSER", "None")
+DBPASSWORD = os.getenv("DBPASSWORD", "None")
+USERS = os.getenv("USERS", "None")
+
+# ✅ 로그 확인 (배포 후 "View Logs"에서 확인 가능!)
+print(f"🔍 Loaded DBHOST: {DBHOST}")
+print(f"🔍 Loaded DBNAME: {DBNAME}")
+print(f"🔍 Loaded DBUSER: {DBUSER}")
+print(f"🔍 Loaded USERS: {USERS}")
+
 # ✅ 설치된 ODBC 드라이버 목록 확인
 print("🔍 Checking available ODBC drivers in Python...")
 print(pyodbc.drivers())  # 설치된 ODBC 드라이버 목록 출력
