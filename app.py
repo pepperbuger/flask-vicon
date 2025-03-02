@@ -241,8 +241,13 @@ def index():
             return render_template('index.html', data=data)
     return render_template('index.html')
 
-if __name__ == '__main__':
-    from gunicorn.app.wsgiapp import run
-    import sys
-    sys.argv = ['gunicorn', '--workers=2', '--timeout=120', 'app:app']
-    run()
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Hello, Railway!"
+
+# 🚀 Gunicorn이 실행될 때 app 객체를 직접 실행
+
+
