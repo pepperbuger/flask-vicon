@@ -177,7 +177,7 @@ def query_database(site_code):
             query_summary = """
                 SELECT SiteCode, SiteName, Quantity, ContractAmount 
                 FROM dbo.SiteInfo 
-                WHERE SiteCode COLLATE Korean_Unicode_CI_AS = ?
+                WHERE SiteCode COLLATE Korean_90_CI_AS = ?
             """
             df_summary = pd.read_sql(query_summary, conn, params=[site_code])
 
@@ -192,7 +192,7 @@ def query_database(site_code):
                        SUM(s.ShipmentQuantity * u.Price) AS TotalAmount
                 FROM dbo.ShipmentStatus s
                 JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-                WHERE s.SiteCode COLLATE Korean_Unicode_CI_AS = ?
+                WHERE SiteCode COLLATE Korean_90_CI_AS = ?
                 GROUP BY s.TGType
             """
             df_material = pd.read_sql(query_material, conn, params=[site_code])
@@ -202,7 +202,7 @@ def query_database(site_code):
                 SELECT SubmaterialType, SUM(Quantity) AS TotalQuantity, 
                        SUM(Amount) AS TotalAmount, AVG(SubPrice) AS AvgPrice
                 FROM dbo.ExecutionStatus
-                WHERE SiteCode COLLATE Korean_Unicode_CI_AS = ?
+                WHERE SiteCode COLLATE Korean_90_CI_AS = ?
                 GROUP BY SubmaterialType
             """
             df_submaterial = pd.read_sql(query_submaterial, conn, params=[site_code])
@@ -213,7 +213,7 @@ def query_database(site_code):
                        u.Price, (s.ShipmentQuantity * u.Price) AS Amount
                 FROM dbo.ShipmentStatus s
                 LEFT JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-                WHERE s.SiteCode COLLATE Korean_Unicode_CI_AS = ?
+                WHERE s.SiteCode COLLATE Korean_90_CI_AS = ?
                 ORDER BY s.Month, s.TGType
             """
             df_details = pd.read_sql(query_details, conn, params=[site_code])
