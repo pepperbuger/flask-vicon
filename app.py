@@ -143,26 +143,41 @@ def home():
 def dashboard():
     if request.method == "POST":
         site_code = request.form.get("site_code")
-        if site_code:
-            data = query_database(site_code)
-            return render_template("index.html", data=data)
+        if not site_code:
+            return "❌ 현장코드를 입력하세요.", 400  # 🚨 입력이 없을 경우 오류 메시지 반환
+        
+        print(f"🔍 입력된 현장코드: {site_code}")  # 🚀 현장코드 확인용 로그 추가
+        
+        data = query_database(site_code)
+        if not data:
+            return "❌ 데이터 조회 실패: 결과가 없습니다.", 404  # 🚨 데이터가 없는 경우 오류 메시지 반환
+        
+        return render_template("index.html", data=data)
+
     return render_template("index.html")
+
 
 # ✅ 데이터 조회 함수
 def query_database(site_code):
     """현장코드별 요약 정보, 자재비, 부자재비, 현장상세조회 데이터를 조회"""
     conn = get_db_connection()
     if conn is None:
+        print("❌ DB 연결 실패! 데이터 조회 불가.")
         return None
 
     with conn:
+        print(f"🔍 DB에서 조회 중: SiteCode={site_code}")  # 🚀 현장코드 확인용 로그 추가
+        
         # ✅ 1. 요약 정보 조회
         query_summary = """
             SELECT SiteCode, SiteName, Quantity, ContractAmount 
             FROM SiteInfo WHERE SiteCode = ?
         """
         df_summary = pd.read_sql(query_summary, conn, params=[site_code])
-        df_summary = df_summary.iloc[0].to_dict() if not df_summary.empty else {}
+        if df_summary.empty:
+            print("❌ 요약 정보 조회 실패: 결과 없음.")
+        else:
+            print(f"✅ 요약 정보 조회 성공: {df_summary.to_dict()}")
 
         # ✅ 2. 자재비 조회
         query_material = """
@@ -192,7 +207,7 @@ def query_database(site_code):
         """
         df_submaterial = pd.read_sql(query_submaterial, conn, params=[site_code])
 
-        # ✅ 4. 현장상세조회
+        # ✅ 4. 현장상세조회 (이전 코드에서 빠졌던 부분 복구)
         query_details = """
             SELECT s.SiteCode, s.TGType, s.Month, s.ShipmentQuantity, 
                    u.Price, (s.ShipmentQuantity * u.Price) AS Amount
@@ -202,9 +217,13 @@ def query_database(site_code):
             ORDER BY s.Month, s.TGType
         """
         df_details = pd.read_sql(query_details, conn, params=[site_code])
+        if df_details.empty:
+            print("❌ 현장상세조회 실패: 결과 없음.")
+        else:
+            print(f"✅ 현장상세조회 성공: {df_details.to_dict()}")
 
     return {
-        "summary": df_summary,
+        "summary": df_summary.to_dict("records"),
         "material": df_material.to_dict("records"),
         "material_total": {
             "total_quantity": material_total_quantity,
@@ -213,5 +232,5 @@ def query_database(site_code):
             "end_month": material_end_month
         },
         "submaterial": df_submaterial.to_dict("records"),
-        "details": df_details.to_dict("records")
+        "details": df_details.to_dict("records")  # ✅ 현장상세조회 추가됨
     }
