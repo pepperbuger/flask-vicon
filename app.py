@@ -157,7 +157,6 @@ def dashboard():
     return render_template("index.html")
 
 
-# ✅ 데이터 조회 함수
 def query_database(site_code):
     """현장코드별 요약 정보, 자재비, 부자재비, 현장상세조회 데이터를 조회"""
     conn = get_db_connection()
@@ -165,72 +164,64 @@ def query_database(site_code):
         print("❌ DB 연결 실패! 데이터 조회 불가.")
         return None
 
-    with conn:
-        print(f"🔍 DB에서 조회 중: SiteCode={site_code}")  # 🚀 현장코드 확인용 로그 추가
-        
-        # ✅ 1. 요약 정보 조회
-        query_summary = """
-            SELECT SiteCode, SiteName, Quantity, ContractAmount 
-            FROM SiteInfo WHERE SiteCode = ?
-        """
-        df_summary = pd.read_sql(query_summary, conn, params=[site_code])
-        if df_summary.empty:
-            print("❌ 요약 정보 조회 실패: 결과 없음.")
-        else:
-            print(f"✅ 요약 정보 조회 성공: {df_summary.to_dict()}")
+    try:
+        with conn:
+            print(f"🔍 DB에서 조회 중: SiteCode={site_code}")  # 🚀 현장코드 확인용 로그 추가
+            
+            # ✅ 1. 요약 정보 조회 (format 적용)
+            query_summary = f"""
+                SELECT SiteCode, SiteName, Quantity, ContractAmount 
+                FROM SiteInfo WHERE SiteCode = '{site_code}'
+            """
+            df_summary = pd.read_sql(query_summary, conn)
+            if df_summary.empty:
+                print("❌ 요약 정보 조회 실패: 결과 없음.")
+            else:
+                print(f"✅ 요약 정보 조회 성공: {df_summary.to_dict()}")
 
-        # ✅ 2. 자재비 조회
-        query_material = """
-            SELECT s.TGType, SUM(s.ShipmentQuantity) AS TotalQuantity, 
-                   SUM(s.ShipmentQuantity * u.Price) AS TotalAmount,
-                   MIN(s.Month) AS StartMonth, MAX(s.Month) AS EndMonth
-            FROM ShipmentStatus s
-            JOIN UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-            WHERE s.SiteCode = ?
-            GROUP BY s.TGType
-        """
-        df_material = pd.read_sql(query_material, conn, params=[site_code])
+            # ✅ 2. 자재비 조회 (format 적용)
+            query_material = f"""
+                SELECT s.TGType, SUM(s.ShipmentQuantity) AS TotalQuantity, 
+                       SUM(s.ShipmentQuantity * u.Price) AS TotalAmount
+                FROM ShipmentStatus s
+                JOIN UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
+                WHERE s.SiteCode = '{site_code}'
+                GROUP BY s.TGType
+            """
+            df_material = pd.read_sql(query_material, conn)
 
-        material_total_quantity = df_material["TotalQuantity"].sum() if not df_material.empty else 0
-        material_total_amount = df_material["TotalAmount"].sum() if not df_material.empty else 0
-        material_start_month = df_material["StartMonth"].min() if not df_material.empty else None
-        material_end_month = df_material["EndMonth"].max() if not df_material.empty else None
+            # ✅ 3. 부자재비 조회 (format 적용)
+            query_submaterial = f"""
+                SELECT SubmaterialType, SUM(Quantity) AS TotalQuantity, 
+                       SUM(Amount) AS TotalAmount, AVG(SubPrice) AS AvgPrice
+                FROM ExecutionStatus
+                WHERE SiteCode = '{site_code}'
+                GROUP BY SubmaterialType
+            """
+            df_submaterial = pd.read_sql(query_submaterial, conn)
 
-        # ✅ 3. 부자재비 조회
-        query_submaterial = """
-            SELECT SubmaterialType, SUM(Quantity) AS TotalQuantity, 
-                   SUM(Amount) AS TotalAmount, AVG(SubPrice) AS AvgPrice,
-                   MIN(Month) AS StartMonth, MAX(Month) AS EndMonth
-            FROM ExecutionStatus
-            WHERE SiteCode = ?
-            GROUP BY SubmaterialType
-        """
-        df_submaterial = pd.read_sql(query_submaterial, conn, params=[site_code])
+            # ✅ 4. 현장상세조회 (format 적용)
+            query_details = f"""
+                SELECT s.SiteCode, s.TGType, s.Month, s.ShipmentQuantity, 
+                       u.Price, (s.ShipmentQuantity * u.Price) AS Amount
+                FROM ShipmentStatus s
+                LEFT JOIN UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
+                WHERE s.SiteCode = '{site_code}'
+                ORDER BY s.Month, s.TGType
+            """
+            df_details = pd.read_sql(query_details, conn)
+            if df_details.empty:
+                print("❌ 현장상세조회 실패: 결과 없음.")
+            else:
+                print(f"✅ 현장상세조회 성공: {df_details.to_dict()}")
 
-        # ✅ 4. 현장상세조회 (이전 코드에서 빠졌던 부분 복구)
-        query_details = """
-            SELECT s.SiteCode, s.TGType, s.Month, s.ShipmentQuantity, 
-                   u.Price, (s.ShipmentQuantity * u.Price) AS Amount
-            FROM ShipmentStatus s
-            LEFT JOIN UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-            WHERE s.SiteCode = ?
-            ORDER BY s.Month, s.TGType
-        """
-        df_details = pd.read_sql(query_details, conn, params=[site_code])
-        if df_details.empty:
-            print("❌ 현장상세조회 실패: 결과 없음.")
-        else:
-            print(f"✅ 현장상세조회 성공: {df_details.to_dict()}")
+    except Exception as e:
+        print(f"❌ 데이터 조회 오류: {e}")  # 🚨 오류 출력 추가
+        return None
 
     return {
         "summary": df_summary.to_dict("records"),
         "material": df_material.to_dict("records"),
-        "material_total": {
-            "total_quantity": material_total_quantity,
-            "total_amount": material_total_amount,
-            "start_month": material_start_month,
-            "end_month": material_end_month
-        },
         "submaterial": df_submaterial.to_dict("records"),
-        "details": df_details.to_dict("records")  # ✅ 현장상세조회 추가됨
+        "details": df_details.to_dict("records")
     }
