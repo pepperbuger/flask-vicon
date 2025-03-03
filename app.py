@@ -212,6 +212,3 @@ def query_database(site_code):
         "submaterial": df_submaterial.to_dict("records"),
         "details": df_details.to_dict("records")
     }
-if __name__ == "__main__":
-    print("🚀 Flask is starting...")
-    app.run(host="0.0.0.0", port=8080, debug=True)
