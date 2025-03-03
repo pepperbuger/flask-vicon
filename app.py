@@ -179,7 +179,8 @@ def query_database(site_code):
                 FROM dbo.SiteInfo 
                 WHERE SiteCode = N'{site_code}'
             """
-            df_summary = pd.read_sql(query_summary, conn, params=[site_code])
+            # df_summary = pd.read_sql(query_summary, conn, params=[site_code])
+            df_summary = pd.read_sql(query_summary, conn)
 
             if df_summary.empty:
                 print("❌ 요약 정보 조회 실패: 결과 없음.")
@@ -195,7 +196,8 @@ def query_database(site_code):
                 WHERE SiteCode = N'{site_code}'
                 GROUP BY s.TGType
             """
-            df_material = pd.read_sql(query_material, conn, params=[site_code])
+            #df_material = pd.read_sql(query_material, conn, params=[site_code])
+            df_material = pd.read_sql(query_material, conn)
 
             # ✅ 3. 부자재비 조회 (`dbo.ExecutionStatus` + SQL 바인딩 사용)
             query_submaterial = """
@@ -205,7 +207,8 @@ def query_database(site_code):
                 WHERE SiteCode = N'{site_code}'
                 GROUP BY SubmaterialType
             """
-            df_submaterial = pd.read_sql(query_submaterial, conn, params=[site_code])
+            #df_submaterial = pd.read_sql(query_submaterial, conn, params=[site_code])
+            df_submaterial = pd.read_sql(query_submaterial, conn)
 
             # ✅ 4. 현장상세조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice` + SQL 바인딩 사용)
             query_details = """
@@ -216,7 +219,8 @@ def query_database(site_code):
                 WHERE s.SiteCode = N'{site_code}'
                 ORDER BY s.Month, s.TGType
             """
-            df_details = pd.read_sql(query_details, conn, params=[site_code])
+            #df_details = pd.read_sql(query_details, conn, params=[site_code])
+            df_details = pd.read_sql(query_details, conn)
 
             if df_details.empty:
                 print("❌ 현장상세조회 실패: 결과 없음.")
