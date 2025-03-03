@@ -24,10 +24,33 @@ def check_ip():
         return f"❌ IP 확인 실패: {e}"
 
 
-DBHOST = os.environ.get("DBHOST")
-DBNAME = os.environ.get("DBNAME")
-DBUSER = os.environ.get("DBUSER")
-DBPASSWORD = os.environ.get("DBPASSWORD")
+import os
+import pyodbc
+
+# 환경 변수에서 DB 접속 정보 가져오기
+DBHOST = os.getenv("DBHOST")
+DBNAME = os.getenv("DBNAME")
+DBUSER = os.getenv("DBUSER")
+DBPASSWORD = os.getenv("DBPASSWORD")
+
+# 환경 변수가 없을 경우 오류 처리
+if not all([DBHOST, DBNAME, DBUSER, DBPASSWORD]):
+    raise ValueError("❌ 환경 변수(DBHOST, DBNAME, DBUSER, DBPASSWORD)가 설정되지 않았습니다.")
+
+# ODBC 연결 문자열
+conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={DBHOST};DATABASE={DBNAME};UID={DBUSER};PWD={DBPASSWORD};TrustServerCertificate=yes"
+
+def get_db_connection():
+    try:
+        print("🔍 Checking database connection...")
+        conn = pyodbc.connect(conn_str)  # DB 연결 시도
+        print("✅ Successfully connected to the database!")
+        return conn
+    except Exception as e:
+        print(f"❌ Database connection failed: {e}")
+        return None  # DB 연결 실패 시 None 반환
+
+
 
 # DB 연결 정보가 없을 경우 오류 출력
 if not all([DBHOST, DBNAME, DBUSER, DBPASSWORD]):
@@ -51,12 +74,14 @@ print(pyodbc.drivers())
 # ✅ 데이터베이스 연결 확인 (기존 코드 유지)
 def get_db_connection():
     try:
-        conn = pyodbc.connect(conn_str)
+        print("🔍 Checking database connection...")
+        conn = pyodbc.connect(conn_str)  # DB 연결 시도
         print("✅ Successfully connected to the database!")
         return conn
     except Exception as e:
-        print(f"❌ Database connection failed: {e}")  # 로그 출력 추가
+        print(f"❌ Database connection failed: {e}")
         return None  # DB 연결 실패 시 None 반환
+
 
 # ✅ 데이터베이스 연결 테스트
 @app.route("/check-db")
