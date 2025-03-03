@@ -28,6 +28,30 @@ def check_db():
             return "❌ DB 연결 실패: 연결이 None입니다."
     except Exception as e:
         return f"❌ DB 연결 오류: {e}"
+@app.route("/test-db-connection")
+def test_db_connection():
+    import pyodbc
+    DBHOST = os.getenv("DBHOST")
+    DBNAME = os.getenv("DBNAME")
+    DBUSER = os.getenv("DBUSER")
+    DBPASSWORD = os.getenv("DBPASSWORD")
+
+    conn_str = (
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        f"SERVER={DBHOST},1433;"
+        f"DATABASE={DBNAME};"
+        f"UID={DBUSER};"
+        f"PWD={DBPASSWORD};"
+        "Encrypt=yes;"
+        "TrustServerCertificate=no;"
+        "Connection Timeout=30;"
+    )
+
+    try:
+        conn = pyodbc.connect(conn_str)
+        return "✅ DB 연결 성공! 🎉"
+    except Exception as e:
+        return f"❌ DB 연결 실패: {str(e)}"
 
 
 # ✅ DB 연결 정보 가져오기
