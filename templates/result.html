@@ -32,25 +32,25 @@
             </tr>
         </thead>
         <tbody>
-            {% for row in data.material %}
+            {% for row in data.get("material", []) %}
             <tr>
-                <td>{{ row.TGType }}</td>
-                <td>{{ "{:,.0f}".format(row.TotalQuantity) }}</td>
-                <td>{{ "{:,.0f}".format(row.AvgPrice) }}</td>
-                <td>{{ "{:,.0f}".format(row.TotalAmount) }}</td>
-                <td>{{ row.StartMonth }}</td>
-                <td>{{ row.EndMonth }}</td>
+                <td>{{ row.get("TGType", "-") }}</td>
+                <td>{{ "{:,.0f}".format(row.get("TotalQuantity", 0)) }}</td>
+                <td>{{ "{:,.0f}".format(row.get("AvgPrice", 0)) }}</td>
+                <td>{{ "{:,.0f}".format(row.get("TotalAmount", 0)) }}</td>
+                <td>{{ row.get("StartMonth", "-") }}</td>
+                <td>{{ row.get("EndMonth", "-") }}</td>
             </tr>
             {% endfor %}
         </tbody>
         <tfoot>
             <tr>
                 <td><strong>소계</strong></td>
-                <td>{{ "{:,.0f}".format(data.material_total.total_quantity) }}</td>
+                <td>{{ "{:,.0f}".format(data.get("material_total", {}).get("total_quantity", 0)) }}</td>
                 <td>-</td>
-                <td>{{ "{:,.0f}".format(data.material_total.total_amount) }}</td>
-                <td>{{ data.material_total.start_month }}</td>
-                <td>{{ data.material_total.end_month }}</td>
+                <td>{{ "{:,.0f}".format(data.get("material_total", {}).get("total_amount", 0)) }}</td>
+                <td>{{ data.get("material_total", {}).get("start_month", "-") }}</td>
+                <td>{{ data.get("material_total", {}).get("end_month", "-") }}</td>
             </tr>
         </tfoot>
     </table>
@@ -69,44 +69,45 @@
             </tr>
         </thead>
         <tbody>
-            {% for row in data.submaterial %}
+            {% for row in data.get("submaterial", []) %}
             <tr>
-                <td>{{ row.SubmaterialType }}</td>
-                <td>{{ "{:,.0f}".format(row.TotalQuantity) }}</td>
-                <td>{{ "{:,.0f}".format(row.AvgPrice) }}</td>
-                <td>{{ "{:,.0f}".format(row.TotalAmount) }}</td>
-                <td>{{ row.StartMonth }}</td>
-                <td>{{ row.EndMonth }}</td>
+                <td>{{ row.get("SubmaterialType", "-") }}</td>
+                <td>{{ "{:,.0f}".format(row.get("TotalQuantity", 0)) }}</td>
+                <td>{{ "{:,.0f}".format(row.get("AvgPrice", 0)) }}</td>
+                <td>{{ "{:,.0f}".format(row.get("TotalAmount", 0)) }}</td>
+                <td>{{ row.get("StartMonth", "-") }}</td>
+                <td>{{ row.get("EndMonth", "-") }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
     <!-- ✅ 3. 현장 상세조회 -->
     <h2>📌 3. 현장 상세조회</h2>
-    {% if data.details %}
+    {% if data.get("details") %}
     <table class="table table-bordered">
         <thead>
-         <tr>
-            <th>현장코드</th>
-            <th>TGType</th>
-            <th>연도</th>
-            <th>출고수량 (㎡)</th>
-            <th>금액 (원)</th>
-            <th>단가 (원/㎡)</th>
-         </tr>
-     </thead>
-     <tbody>
-          {% for row in data.details %}
-          <tr>
-            <td>{{ row.SiteCode }}</td>
-            <td>{{ row.TGType }}</td>
-            <td>{{ row.Month }}</td>
-            <td>{{ "{:,.2f}".format(row.ShipmentQuantity) }}</td>
-            <td>{{ "{:,.0f}".format(row.Amount) }}</td>
-            <td>{{ "{:,.0f}".format(row.Price) }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
+            <tr>
+                <th>현장코드</th>
+                <th>TGType</th>
+                <th>연도</th>
+                <th>출고수량 (㎡)</th>
+                <th>금액 (원)</th>
+                <th>단가 (원/㎡)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data.get("details", []) %}
+            <tr>
+                <td>{{ row.get("SiteCode", "-") }}</td>
+                <td>{{ row.get("TGType", "-") }}</td>
+                <td>{{ row.get("Month", "-") }}</td>
+                <td>{{ "{:,.2f}".format(row.get("ShipmentQuantity", 0)) }}</td>
+                <td>{{ "{:,.0f}".format(row.get("Amount", 0)) }}</td>
+                <td>{{ "{:,.0f}".format(row.get("Price", 0)) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
     {% else %}
     <p>📌 현장 상세조회 데이터가 없습니다.</p>
