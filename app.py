@@ -145,22 +145,24 @@ def dashboard():
     if request.method == "POST":
         site_code = request.form.get("site_code")
         print(f"🔍 입력된 현장코드 (원본): '{site_code}'")  
-        
 
         if not site_code:
-            return "❌ 현장코드를 입력하세요.", 400  # 🚨 입력이 없을 경우 오류 메시지 반환
-        
-        # 🔹 한글 데이터 `Unicode` 변환 확인
-        site_code = site_code.strip()  # 🔹 앞뒤 공백 제거
+            return "❌ 현장코드를 입력하세요.", 400  
+
+        site_code = site_code.strip()  
 
         print(f"🔍 변환된 site_code: '{site_code}'")  
-        
 
         data = query_database(site_code)
-        if not data:
-            return render_template("index.html", error="❌ 데이터 조회 실패: 결과가 없습니다.")  # 🚨 템플릿에서 에러 표시
         
-        return render_template("index.html", data=data)  # 🚀 정상적으로 데이터가 있는 경우 렌더링
+        # ✅ JSON 데이터 형식인지 확인
+        if isinstance(data, tuple):
+            data = data[0]  # 튜플이면 첫 번째 요소만 사용
+
+        if "error" in data:
+            return render_template("index.html", error=data["error"])  
+
+        return render_template("index.html", data=data)  
 
     return render_template("index.html")
 
@@ -178,12 +180,11 @@ def query_database(site_code):
     """현장코드별 데이터 조회"""
     conn = get_db_connection()
     if conn is None:
-        return jsonify({"error": "DB 연결 실패!"}), 500  # 🚨 오류 메시지를 JSON 응답으로 반환
+        return {"error": "DB 연결 실패!"}  # 🚀 튜플이 아닌 딕셔너리로 반환
 
     try:
         with conn:
-            print(f"🔍 DB에서 조회 중: SiteCode='{site_code}', 길이: {len(site_code)}")  
-            
+            print(f"🔍 DB에서 조회 중: SiteCode='{site_code}'")  
 
             # ✅ 1. 요약 정보 조회
             query_summary = f"""
@@ -194,17 +195,16 @@ def query_database(site_code):
             df_summary = pd.read_sql(query_summary, conn)
 
             if df_summary.empty:
-                return jsonify({"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}), 404
+                return {"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}  # 🚀 튜플이 아닌 딕셔너리 반환
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500  # 🚨 오류 메시지를 JSON으로 반환
+        import traceback
+        error_message = traceback.format_exc()
+        print(f"❌ 데이터 조회 오류: {error_message}")  
+        return {"error": str(e), "traceback": error_message}  # 🚀 튜플이 아닌 딕셔너리 반환
 
-    return jsonify({"summary": df_summary.to_dict("records")})
+    return {"summary": df_summary.to_dict("records")}  # 🚀 튜플이 아닌 딕셔너리 반환
 
-    try:
-        with conn:
-            print(f"🔍 DB에서 조회 중: SiteCode='{site_code}', 길이: {len(site_code)}")  
-            
 
             # ✅ 1. 요약 정보 조회 (여기 들여쓰기 확인!)
             query_summary = f"""
