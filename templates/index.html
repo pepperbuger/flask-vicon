@@ -25,12 +25,18 @@
     <div class="mt-5">
         <!-- ✅ 요약 정보 -->
         <h2>📋 요약 정보</h2>
+        {% if data and 'summary' in data and data['summary'] %}
         <ul class="list-group mb-4">
-            <li class="list-group-item"><strong>현장코드:</strong> {{ data.summary.SiteCode }}</li>
-            <li class="list-group-item"><strong>현장명:</strong> {{ data.summary.SiteName }}</li>
-            <li class="list-group-item"><strong>계약물량:</strong> {{ "{:,.0f}".format(data.summary.Quantity) }} ㎡</li>
-            <li class="list-group-item"><strong>계약금액:</strong> {{ "{:,.0f}".format(data.summary.ContractAmount) }} 원</li>
+            <li class="list-group-item"><strong>현장코드:</strong> {{ data['summary'][0]['SiteCode'] }}</li>
+            <li class="list-group-item"><strong>현장명:</strong> {{ data['summary'][0]['SiteName'] }}</li>
+            <li class="list-group-item"><strong>계약물량:</strong> {{ "{:,.0f}".format(data['summary'][0]['Quantity']) }} ㎡</li>
+            <li class="list-group-item"><strong>계약금액:</strong> {{ "{:,.0f}".format(data['summary'][0]['ContractAmount']) }} 원</li>
         </ul>
+        {% else %}
+            <p>📌 조회된 데이터가 없습니다.</p>
+        {% endif %}
+    </div>
+    
 
         <!-- ✅ 1. 자재비 -->
         <h2>🏗️ 1. 자재비</h2>
