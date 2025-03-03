@@ -210,6 +210,7 @@ def query_database(site_code):
                 WHERE SiteCode = N'{site_code}'
             """
             df_summary = pd.read_sql(query_summary, conn)
+            print(f"✅ 요약 데이터 조회 완료 (행 개수: {len(df_summary)})")
 
             if df_summary.empty:
                 return {"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}
@@ -227,6 +228,15 @@ def query_database(site_code):
                 GROUP BY s.TGType
             """
             df_material = pd.read_sql(query_material, conn)
+            print(f"✅ 자재비 데이터 조회 완료 (행 개수: {len(df_material)})")
+
+            # ✅ 자재비 소계 처리 (None 방지)
+            material_total = {
+                "total_quantity": df_material["TotalQuantity"].sum() if not df_material.empty else 0,
+                "total_amount": df_material["TotalAmount"].sum() if not df_material.empty else 0,
+                "start_month": df_material["StartMonth"].min() if not df_material.empty else "-",
+                "end_month": df_material["EndMonth"].max() if not df_material.empty else "-"
+            }
 
             # ✅ 3. 부자재비 조회
             query_submaterial = f"""
@@ -240,8 +250,17 @@ def query_database(site_code):
                 GROUP BY SubmaterialType
             """
             df_submaterial = pd.read_sql(query_submaterial, conn)
+            print(f"✅ 부자재비 데이터 조회 완료 (행 개수: {len(df_submaterial)})")
 
-            # ✅ 4. 현장 상세조회 (수정된 쿼리)
+            # ✅ 부자재비 소계 처리 (None 방지)
+            submaterial_total = {
+                "total_quantity": df_submaterial["TotalQuantity"].sum() if not df_submaterial.empty else 0,
+                "total_amount": df_submaterial["TotalAmount"].sum() if not df_submaterial.empty else 0,
+                "start_month": df_submaterial["StartMonth"].min() if not df_submaterial.empty else "-",
+                "end_month": df_submaterial["EndMonth"].max() if not df_submaterial.empty else "-"
+            }
+
+            # ✅ 4. 현장 상세조회
             query_details = f"""
                 SELECT s.SiteCode, s.TGType, s.Month, s.ShipmentQuantity, 
                        u.Price, (s.ShipmentQuantity * u.Price) AS Amount
@@ -251,24 +270,22 @@ def query_database(site_code):
                 ORDER BY s.Month, s.TGType
             """
             df_details = pd.read_sql(query_details, conn)
+            print(f"✅ 현장 상세조회 데이터 조회 완료 (행 개수: {len(df_details)})")
 
-            if df_details.empty:
-                print("❌ 현장 상세조회 실패: 결과 없음.")
-            else:
-                print(f"✅ 현장 상세조회 성공: {df_details.to_dict()}")  # ✅ 데이터 출력
-
+            # ✅ 데이터가 없을 경우 빈 리스트 반환하여 KeyError 방지
             return {
-                "summary": df_summary.to_dict("records"),
-                "material": df_material.to_dict("records"),
-                "submaterial": df_submaterial.to_dict("records"),
-                "details": df_details.to_dict("records"),  # ✅ 상세조회 데이터 포함
+                "summary": df_summary.to_dict("records") if not df_summary.empty else [],
+                "material": df_material.to_dict("records") if not df_material.empty else [],
+                "material_total": material_total,
+                "submaterial": df_submaterial.to_dict("records") if not df_submaterial.empty else [],
+                "submaterial_total": submaterial_total,
+                "details": df_details.to_dict("records") if not df_details.empty else []
             }
     except Exception as e:
         import traceback
         error_message = traceback.format_exc()
         print(f"❌ 데이터 조회 오류: {error_message}")
         return {"error": str(e)}
-
 
 # 🚀 500 Internal Server Error 핸들링 (오류 메시지를 JSON으로 반환)
 @app.errorhandler(500)
