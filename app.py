@@ -24,14 +24,15 @@ def check_ip():
         return f"❌ IP 확인 실패: {e}"
 
 
-# ✅ 환경 변수 설정
-DBHOST = os.environ.get("DBHOST", "MISSING_DBHOST")
-DBNAME = os.environ.get("DBNAME", "MISSING_DBNAME")
-DBUSER = os.environ.get("DBUSER", "MISSING_DBUSER")
-DBPASSWORD = os.environ.get("DBPASSWORD", "MISSING_DBPASSWORD")
-USERS = os.environ.get("USERS", "MISSING_USERS")
+DBHOST = os.environ.get("DBHOST")
+DBNAME = os.environ.get("DBNAME")
+DBUSER = os.environ.get("DBUSER")
+DBPASSWORD = os.environ.get("DBPASSWORD")
 
-# ✅ 데이터베이스 연결 문자열
+# DB 연결 정보가 없을 경우 오류 출력
+if not all([DBHOST, DBNAME, DBUSER, DBPASSWORD]):
+    raise ValueError("❌ 환경 변수(DBHOST, DBNAME, DBUSER, DBPASSWORD)가 설정되지 않았습니다!")
+
 conn_str = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
     f"Server=tcp:{DBHOST},1433;"
@@ -54,8 +55,9 @@ def get_db_connection():
         print("✅ Successfully connected to the database!")
         return conn
     except Exception as e:
-        print("❌ Database connection failed:", e)
+        print(f"❌ Database connection failed: {e}")  # 로그 출력 추가
         return None  # DB 연결 실패 시 None 반환
+
 
 
 # ✅ 사용자 계정 로드 함수
