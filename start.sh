@@ -26,7 +26,7 @@ if [ "$FLASK_DEBUG" = "true" ]; then
 else
     echo "🚀 Starting the Gunicorn server..."
     PORT=${PORT:-8080}
-    exec gunicorn -w 2 -b 0.0.0.0:$PORT wsgi:app --timeout 120 --log-level=debug --capture-output --error-logfile - --access-logfile -
+    exec gunicorn -w 2 -b 0.0.0.0:$PORT --chdir /app wsgi:app
 fi
 
 export FLASK_APP=wsgi.py

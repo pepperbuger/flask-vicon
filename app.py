@@ -48,7 +48,7 @@ conn_str = (
 print("🔍 Checking available ODBC drivers in Python...")
 print(pyodbc.drivers())
 
-# ✅ 데이터베이스 연결 확인
+# ✅ 데이터베이스 연결 확인 (기존 코드 유지)
 def get_db_connection():
     try:
         conn = pyodbc.connect(conn_str)
@@ -57,6 +57,19 @@ def get_db_connection():
     except Exception as e:
         print(f"❌ Database connection failed: {e}")  # 로그 출력 추가
         return None  # DB 연결 실패 시 None 반환
+
+# ✅ 새로운 엔드포인트 추가
+@app.route("/check-db")
+def check_db():
+    try:
+        conn = get_db_connection()
+        if conn:
+            return "✅ DB 연결 성공!"
+        else:
+            return "❌ DB 연결 실패: 연결이 None입니다."
+    except Exception as e:
+        return f"❌ DB 연결 실패: {e}"
+
 
 
 
@@ -194,3 +207,5 @@ def query_database(site_code):
         "submaterial": df_submaterial.to_dict("records"),
         "details": df_details.to_dict("records")
     }
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080, debug=True)
