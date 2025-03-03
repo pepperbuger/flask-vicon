@@ -18,6 +18,18 @@ app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_PERMANENT"] = False
 Session(app)
 
+@app.route("/check-db")
+def check_db():
+    try:
+        conn = get_db_connection()
+        if conn:
+            return "✅ DB 연결 성공!"
+        else:
+            return "❌ DB 연결 실패: 연결이 None입니다."
+    except Exception as e:
+        return f"❌ DB 연결 오류: {e}"
+
+
 # ✅ DB 연결 정보 가져오기
 DBHOST = os.getenv("DBHOST")
 DBNAME = os.getenv("DBNAME")
