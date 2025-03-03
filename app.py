@@ -7,14 +7,14 @@ from decimal import Decimal
 from dotenv import load_dotenv
 import requests
 
-
-# 환경 변수 로드
+# ✅ 환경 변수 로드
 load_dotenv()
 
 # ✅ Flask 앱 생성
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "your_fallback_secret")  # 환경 변수에서 가져오고 없으면 기본값 사용
 
+# ✅ 외부 IP 확인
 @app.route("/check-ip")
 def check_ip():
     try:
@@ -23,42 +23,30 @@ def check_ip():
     except Exception as e:
         return f"❌ IP 확인 실패: {e}"
 
-
-import os
-import pyodbc
-
-# 환경 변수에서 DB 접속 정보 가져오기
+# ✅ 환경 변수에서 DB 접속 정보 가져오기
 DBHOST = os.getenv("DBHOST")
 DBNAME = os.getenv("DBNAME")
 DBUSER = os.getenv("DBUSER")
 DBPASSWORD = os.getenv("DBPASSWORD")
 
-# 환경 변수가 없을 경우 오류 처리
+@app.route("/check-env")
+def check_env():
+    """ 환경 변수 확인용 엔드포인트 """
+    return f"""
+    DBHOST: {DBHOST} <br>
+    DBNAME: {DBNAME} <br>
+    DBUSER: {DBUSER} <br>
+    DBPASSWORD: {"*" * len(DBPASSWORD) if DBPASSWORD else "None"}
+    """
+
+# ✅ 환경 변수가 없을 경우 오류 처리
 if not all([DBHOST, DBNAME, DBUSER, DBPASSWORD]):
     raise ValueError("❌ 환경 변수(DBHOST, DBNAME, DBUSER, DBPASSWORD)가 설정되지 않았습니다.")
 
-# ODBC 연결 문자열
-conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={DBHOST};DATABASE={DBNAME};UID={DBUSER};PWD={DBPASSWORD};TrustServerCertificate=yes"
-
-def get_db_connection():
-    try:
-        print("🔍 Checking database connection...")
-        conn = pyodbc.connect(conn_str)  # DB 연결 시도
-        print("✅ Successfully connected to the database!")
-        return conn
-    except Exception as e:
-        print(f"❌ Database connection failed: {e}")
-        return None  # DB 연결 실패 시 None 반환
-
-
-
-# DB 연결 정보가 없을 경우 오류 출력
-if not all([DBHOST, DBNAME, DBUSER, DBPASSWORD]):
-    raise ValueError("❌ 환경 변수(DBHOST, DBNAME, DBUSER, DBPASSWORD)가 설정되지 않았습니다!")
-
+# ✅ ODBC 연결 문자열 (MSSQL 연결)
 conn_str = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
-    f"Server=tcp:{DBHOST},1433;"
+    f"SERVER={DBHOST},1433;"
     f"DATABASE={DBNAME};"
     f"UID={DBUSER};"
     f"PWD={DBPASSWORD};"
@@ -67,50 +55,32 @@ conn_str = (
     "Connection Timeout=30;"
 )
 
-# ✅ ODBC 드라이버 확인
-print("🔍 Checking available ODBC drivers in Python...")
-print(pyodbc.drivers())
-
-# ✅ 데이터베이스 연결 확인 (기존 코드 유지)
+# ✅ DB 연결 함수
 def get_db_connection():
     try:
         print("🔍 Checking database connection...")
-        conn = pyodbc.connect(conn_str)  # DB 연결 시도
+        conn = pyodbc.connect(conn_str)
         print("✅ Successfully connected to the database!")
         return conn
     except Exception as e:
         print(f"❌ Database connection failed: {e}")
         return None  # DB 연결 실패 시 None 반환
 
+# ✅ ODBC 드라이버 확인
+@app.route("/check-odbc")
+def check_odbc():
+    return f"Available ODBC Drivers: {pyodbc.drivers()}"
 
-# ✅ 데이터베이스 연결 테스트
+# ✅ DB 연결 테스트 엔드포인트
 @app.route("/check-db")
 def check_db():
-    try:
-        print("🔍 Checking database connection...")
-        conn = get_db_connection()
-        if conn:
-            print("✅ DB 연결 성공!")
-            return "✅ DB 연결 성공!"
-        else:
-            print("❌ DB 연결 실패: 연결이 None입니다.")
-            return "❌ DB 연결 실패: 연결이 None입니다."
-    except Exception as e:
-        print(f"❌ DB 연결 실패: {e}")
-        return f"❌ DB 연결 실패: {e}"
-
-
-
-
+    conn = get_db_connection()
+    return "✅ DB 연결 성공!" if conn else "❌ DB 연결 실패: 연결이 None입니다."
 
 # ✅ 사용자 계정 로드 함수
 def load_users_from_env():
     users_str = os.getenv("USERS", "")
-    users = {}
-    if users_str:
-        for pair in users_str.split(","):
-            username, password = pair.split(":")
-            users[username.strip()] = password.strip()
+    users = {pair.split(":")[0].strip(): pair.split(":")[1].strip() for pair in users_str.split(",")} if users_str else {}
     return users
 
 # ✅ 사용자 계정 로드
@@ -122,7 +92,6 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-# ✅ 사용자 모델
 class User(UserMixin):
     def __init__(self, id):
         self.id = id
@@ -131,33 +100,28 @@ class User(UserMixin):
 def load_user(user_id):
     return User(user_id) if user_id in users else None
 
-# ✅ 로그인 페이지
+# ✅ 로그인 & 로그아웃 엔드포인트
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
         if username in users and users[username] == password:
-            user = User(username)
-            login_user(user)
+            login_user(User(username))
             return redirect(url_for("dashboard"))  # ✅ 로그인 성공 시 대시보드로 이동
-        else:
-            return "❌ 로그인 실패! 잘못된 아이디 또는 비밀번호", 401  # Unauthorized
-
+        return "❌ 로그인 실패! 잘못된 아이디 또는 비밀번호", 401  # Unauthorized
     return render_template("login.html")
 
-# ✅ 로그아웃 기능
 @app.route("/logout")
 @login_required
 def logout():
     logout_user()
     return redirect(url_for("login"))
 
-# ✅ 🚀 Railway 배포 테스트를 위한 홈 페이지 (로그인 필요 없음)
+# ✅ 기본 페이지 (로그인 필요 없음)
 @app.route("/")
 def home():
     return "✅ Flask app is running! 🚀"
-
 
 # ✅ 대시보드 (로그인 필요)
 @app.route("/dashboard", methods=["GET", "POST"])

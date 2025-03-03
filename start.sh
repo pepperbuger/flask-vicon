@@ -9,4 +9,4 @@ export FLASK_APP=wsgi.py
 export FLASK_DEBUG=true  # 디버깅 활성화
 
 # Waitress 실행 (PORT 자동 감지)
-exec waitress-serve --host 0.0.0.0 --port=${PORT} wsgi:app
+exec python wsgi.py
