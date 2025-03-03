@@ -37,13 +37,13 @@ def test_db_connection():
     DBPASSWORD = os.getenv("DBPASSWORD")
 
     conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
+        "DRIVER={ODBC Driver 17 for SQL Server};"
         f"SERVER={DBHOST},1433;"
         f"DATABASE={DBNAME};"
         f"UID={DBUSER};"
         f"PWD={DBPASSWORD};"
         "Encrypt=yes;"
-        "TrustServerCertificate=no;"
+        "TrustServerCertificate=YES;"
         "Connection Timeout=30;"
     )
 
