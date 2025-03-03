@@ -74,8 +74,19 @@ def check_odbc():
 # ✅ DB 연결 테스트 엔드포인트
 @app.route("/check-db")
 def check_db():
-    conn = get_db_connection()
-    return "✅ DB 연결 성공!" if conn else "❌ DB 연결 실패: 연결이 None입니다."
+    try:
+        print("🔍 Checking database connection...")
+        conn = get_db_connection()
+        if conn:
+            print("✅ DB 연결 성공!")
+            return "✅ DB 연결 성공!"
+        else:
+            print("❌ DB 연결 실패: 연결이 None입니다.")
+            return "❌ DB 연결 실패: 연결이 None입니다."
+    except Exception as e:
+        print(f"❌ Database connection failed: {e}")
+        return f"❌ Database connection failed: {e}"
+
 
 # ✅ 사용자 계정 로드 함수
 def load_users_from_env():
