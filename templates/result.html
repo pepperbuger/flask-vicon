@@ -81,6 +81,36 @@
             {% endfor %}
         </tbody>
     </table>
+<!-- ✅ 3. 현장 상세조회 -->
+<h2>📌 3. 현장 상세조회</h2>
+{% if data.details %}
+<table class="table table-bordered">
+    <thead>
+         <tr>
+            <th>현장코드</th>
+            <th>TGType</th>
+            <th>연도</th>
+            <th>출고수량 (㎡)</th>
+            <th>금액 (원)</th>
+            <th>단가 (원/㎡)</th>
+         </tr>
+     </thead>
+     <tbody>
+          {% for row in data.details %}
+          <tr>
+            <td>{{ row.SiteCode }}</td>
+            <td>{{ row.TGType }}</td>
+            <td>{{ row.Month }}</td>
+            <td>{{ "{:,.2f}".format(row.ShipmentQuantity) }}</td>
+            <td>{{ "{:,.0f}".format(row.Amount) }}</td>
+            <td>{{ "{:,.0f}".format(row.Price) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>📌 현장 상세조회 데이터가 없습니다.</p>
+{% endif %}
 
 </body>
 </html>

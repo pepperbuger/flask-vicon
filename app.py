@@ -228,14 +228,6 @@ def query_database(site_code):
             """
             df_material = pd.read_sql(query_material, conn)
 
-            # ✅ 자재비 소계 계산
-            material_total = {
-                "total_quantity": df_material["TotalQuantity"].sum(),
-                "total_amount": df_material["TotalAmount"].sum(),
-                "start_month": df_material["StartMonth"].min(),
-                "end_month": df_material["EndMonth"].max()
-            }
-
             # ✅ 3. 부자재비 조회
             query_submaterial = f"""
                 SELECT SubmaterialType, SUM(Quantity) AS TotalQuantity, 
@@ -249,15 +241,7 @@ def query_database(site_code):
             """
             df_submaterial = pd.read_sql(query_submaterial, conn)
 
-            # ✅ 부자재비 소계 계산
-            submaterial_total = {
-                "total_quantity": df_submaterial["TotalQuantity"].sum(),
-                "total_amount": df_submaterial["TotalAmount"].sum(),
-                "start_month": df_submaterial["StartMonth"].min(),
-                "end_month": df_submaterial["EndMonth"].max()
-            }
-
-            # ✅ 4. 현장상세조회
+            # ✅ 4. 현장 상세조회 (수정된 쿼리)
             query_details = f"""
                 SELECT s.SiteCode, s.TGType, s.Month, s.ShipmentQuantity, 
                        u.Price, (s.ShipmentQuantity * u.Price) AS Amount
@@ -268,13 +252,16 @@ def query_database(site_code):
             """
             df_details = pd.read_sql(query_details, conn)
 
+            if df_details.empty:
+                print("❌ 현장 상세조회 실패: 결과 없음.")
+            else:
+                print(f"✅ 현장 상세조회 성공: {df_details.to_dict()}")  # ✅ 데이터 출력
+
             return {
                 "summary": df_summary.to_dict("records"),
                 "material": df_material.to_dict("records"),
-                "material_total": material_total,  # ✅ 자재비 소계 추가
                 "submaterial": df_submaterial.to_dict("records"),
-                "submaterial_total": submaterial_total,  # ✅ 부자재비 소계 추가
-                "details": df_details.to_dict("records")
+                "details": df_details.to_dict("records"),  # ✅ 상세조회 데이터 포함
             }
     except Exception as e:
         import traceback
