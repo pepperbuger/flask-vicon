@@ -94,8 +94,6 @@ def logout():
 @app.route("/dashboard", methods=["GET", "POST"])
 @login_required
 def dashboard():
-    data = session.get("data", None)
-
     if request.method == "POST":
         site_code = request.form.get("site_code")
         if not site_code:
@@ -103,12 +101,15 @@ def dashboard():
 
         site_code = site_code.strip()
         data = query_database(site_code)
-        session["data"] = data  # ✅ 데이터 유지
+        session["data"] = data  # ✅ 세션에 데이터 저장
 
         if "error" in data:
             return render_template("index.html", error=data["error"])
 
-    return render_template("index.html", data=data)
+        return redirect(url_for("result"))  # ✅ 결과 페이지로 이동
+
+    return render_template("index.html")  # ✅ GET 요청 시 기본 페이지 유지
+
 
 # ✅ 결과 페이지
 @app.route("/result")

@@ -6,31 +6,21 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="container mt-5">
-    <h1>📋 조회 결과 - {{ site_code }}</h1>
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>SiteCode</th>
-                <th>TGType</th>
-                <th>Month</th>
-                <th>ShipmentQuantity</th>
-                <th>Price</th>
-                <th>Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in data['details'] %}
-            <tr>
-                <td>{{ row["SiteCode"] }}</td>
-                <td>{{ row["TGType"] }}</td>
-                <td>{{ row["Month"] }}</td>
-                <td>{{ "{:,.2f}".format(row["ShipmentQuantity"]) }}</td>
-                <td>{{ "{:,.0f}".format(row["Price"]) }}</td>
-                <td>{{ "{:,.0f}".format(row["Amount"]) }}</td>
-            </tr>
-            {% endfor %}            
-        </tbody>
-    </table>
-    <a href="/" class="btn btn-secondary">다시 조회</a>
+    <h1>📋 조회 결과</h1>
+
+    {% if data and 'summary' in data and data['summary'] %}
+    <ul class="list-group mb-4">
+        <li class="list-group-item"><strong>현장코드:</strong> {{ data['summary'][0]['SiteCode'] }}</li>
+        <li class="list-group-item"><strong>현장명:</strong> {{ data['summary'][0]['SiteName'] }}</li>
+        <li class="list-group-item"><strong>계약물량:</strong> {{ "{:,.0f}".format(data['summary'][0]['Quantity']) }} ㎡</li>
+        <li class="list-group-item"><strong>계약금액:</strong> {{ "{:,.0f}".format(data['summary'][0]['ContractAmount']) }} 원</li>
+    </ul>
+    {% else %}
+        <p>📌 조회된 데이터가 없습니다.</p>
+    {% endif %}
+
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">🔄 다시 조회</a>
+    <a href="{{ url_for('logout') }}" class="btn btn-danger">🚪 로그아웃</a>
 </body>
 </html>
+
