@@ -15,13 +15,13 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "your_fallback_secret")  # 환경 변수에서 가져오고 없으면 기본값 사용
 
 # ✅ 외부 IP 확인
-@app.route("/check-ip")
-def check_ip():
-    try:
-        my_ip = requests.get("https://api64.ipify.org?format=json").json()["ip"]
-        return f"🚀 Railway 서버의 현재 외부 IP: {my_ip}"
-    except Exception as e:
-        return f"❌ IP 확인 실패: {e}"
+# @app.route("/check-ip")
+# def check_ip():
+#     try:
+#         my_ip = requests.get("https://api64.ipify.org?format=json").json()["ip"]
+#         return f"🚀 Railway 서버의 현재 외부 IP: {my_ip}"
+#     except Exception as e:
+#         return f"❌ IP 확인 실패: {e}"
 
 # ✅ 환경 변수에서 DB 접속 정보 가져오기
 DBHOST = os.getenv("DBHOST")
@@ -29,15 +29,14 @@ DBNAME = os.getenv("DBNAME")
 DBUSER = os.getenv("DBUSER")
 DBPASSWORD = os.getenv("DBPASSWORD")
 
-@app.route("/check-env")
-def check_env():
-    """ 환경 변수 확인용 엔드포인트 """
-    return f"""
-    DBHOST: {DBHOST} <br>
-    DBNAME: {DBNAME} <br>
-    DBUSER: {DBUSER} <br>
-    DBPASSWORD: {"*" * len(DBPASSWORD) if DBPASSWORD else "None"}
-    """
+# @app.route("/check-env")
+# def check_env():
+#     return f"""
+#     DBHOST: {DBHOST} <br>
+#     DBNAME: {DBNAME} <br>
+#     DBUSER: {DBUSER} <br>
+#     DBPASSWORD: {"*" * len(DBPASSWORD) if DBPASSWORD else "None"}
+#     """
 
 # ✅ 환경 변수가 없을 경우 오류 처리
 if not all([DBHOST, DBNAME, DBUSER, DBPASSWORD]):
@@ -132,7 +131,11 @@ def logout():
 # ✅ 기본 페이지 (로그인 필요 없음)
 @app.route("/")
 def home():
-    return "✅ Flask app is running! 🚀"
+    # 사용자가 로그인하지 않았다면 로그인 페이지로 리디렉션
+    if "user_id" not in session:
+        return redirect(url_for("login"))  # 🚀 로그인 페이지로 이동
+    return redirect(url_for("dashboard"))  # 🚀 로그인된 사용자는 대시보드로 이동
+
 
 # ✅ 대시보드 (로그인 필요)
 @app.route("/dashboard", methods=["GET", "POST"])
