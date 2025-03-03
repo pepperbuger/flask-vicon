@@ -44,7 +44,8 @@ def get_db_connection():
         return conn
     except Exception as e:
         print("❌ Database connection failed:", e)
-        return None  # 🚨 연결 실패 시 None 반환
+        return None  # DB 연결 실패 시 None 반환
+
 
 # ✅ 사용자 계정 로드 함수
 def load_users_from_env():
@@ -99,10 +100,8 @@ def logout():
 # ✅ 🚀 Railway 배포 테스트를 위한 홈 페이지 (로그인 필요 없음)
 @app.route("/")
 def home():
-    conn = get_db_connection()
-    if conn is None:
-        return "❌ Database connection failed", 500
-    return "✅ Hello, Railway! 🚀 Database connected successfully."
+    return "✅ Flask app is running! 🚀"
+
 
 # ✅ 대시보드 (로그인 필요)
 @app.route("/dashboard", methods=["GET", "POST"])
