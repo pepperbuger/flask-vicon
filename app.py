@@ -7,6 +7,8 @@ from decimal import Decimal
 from dotenv import load_dotenv
 import requests
 import sys  # 🚀 sys 모듈 추가
+from flask_session import Session  # 🚀 Flask-Session 추가
+
 
 
 # ✅ 환경 변수 로드
@@ -30,6 +32,10 @@ DBHOST = os.getenv("DBHOST")
 DBNAME = os.getenv("DBNAME")
 DBUSER = os.getenv("DBUSER")
 DBPASSWORD = os.getenv("DBPASSWORD")
+
+app.config["SESSION_TYPE"] = "filesystem"  # 🚀 세션을 파일 시스템에 저장
+app.config["SESSION_PERMANENT"] = False
+Session(app)
 
 # @app.route("/check-env")
 # def check_env():
@@ -161,7 +167,7 @@ def result():
 
     return render_template("result.html", data=data)
 
-    
+
 # ✅ 대시보드 (로그인 필요)
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import pyodbc
