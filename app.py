@@ -133,11 +133,35 @@ def logout():
 # ✅ 기본 페이지 (로그인 필요 없음)
 @app.route("/")
 def home():
-    # 사용자가 로그인하지 않았다면 로그인 페이지로 리디렉션
-    if "user_id" not in session:
-        return redirect(url_for("login"))  # 🚀 로그인 페이지로 이동
-    return redirect(url_for("dashboard"))  # 🚀 로그인된 사용자는 대시보드로 이동
+    return redirect(url_for("dashboard"))  # 기본 페이지에서 대시보드로 이동
 
+@app.route("/dashboard", methods=["GET", "POST"])
+@login_required
+def dashboard():
+    data = session.get("data", None)  # 세션에서 데이터를 가져오기
+
+    if request.method == "POST":
+        site_code = request.form.get("site_code")
+        if not site_code:
+            return render_template("index.html", error="❌ 현장코드를 입력하세요.")
+
+        data = query_database(site_code)
+        session["data"] = data  # 🚀 데이터 유지
+        if "error" in data:
+            return render_template("index.html", error=data["error"])
+
+    return render_template("index.html", data=data)
+
+@app.route("/result")
+@login_required
+def result():
+    data = session.get("data", None)
+    if not data:
+        return redirect(url_for("dashboard"))  # 🚀 데이터 없으면 대시보드로 이동
+
+    return render_template("result.html", data=data)
+
+    
 # ✅ 대시보드 (로그인 필요)
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import pyodbc
