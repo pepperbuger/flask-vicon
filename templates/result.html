@@ -8,6 +8,7 @@
 <body class="container mt-5">
     <h1>📋 조회 결과</h1>
 
+    <!-- ✅ 요약 정보 -->
     {% if data and 'summary' in data and data['summary'] %}
     <ul class="list-group mb-4">
         <li class="list-group-item"><strong>현장코드:</strong> {{ data['summary'][0]['SiteCode'] }}</li>
@@ -15,12 +16,71 @@
         <li class="list-group-item"><strong>계약물량:</strong> {{ "{:,.0f}".format(data['summary'][0]['Quantity']) }} ㎡</li>
         <li class="list-group-item"><strong>계약금액:</strong> {{ "{:,.0f}".format(data['summary'][0]['ContractAmount']) }} 원</li>
     </ul>
-    {% else %}
-        <p>📌 조회된 데이터가 없습니다.</p>
     {% endif %}
 
-    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">🔄 다시 조회</a>
-    <a href="{{ url_for('logout') }}" class="btn btn-danger">🚪 로그아웃</a>
+    <!-- ✅ 1. 자재비 -->
+    <h2>🏗️ 1. 자재비</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>TG타입</th>
+                <th>수량 (㎡)</th>
+                <th>단가 (원/㎡)</th>
+                <th>금액 (원)</th>
+                <th>출고시작월</th>
+                <th>출고종료월</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data.material %}
+            <tr>
+                <td>{{ row.TGType }}</td>
+                <td>{{ "{:,.0f}".format(row.TotalQuantity) }}</td>
+                <td>{{ "{:,.0f}".format(row.AvgPrice) }}</td>
+                <td>{{ "{:,.0f}".format(row.TotalAmount) }}</td>
+                <td>{{ row.StartMonth }}</td>
+                <td>{{ row.EndMonth }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td><strong>소계</strong></td>
+                <td>{{ "{:,.0f}".format(data.material_total.total_quantity) }}</td>
+                <td>-</td>
+                <td>{{ "{:,.0f}".format(data.material_total.total_amount) }}</td>
+                <td>{{ data.material_total.start_month }}</td>
+                <td>{{ data.material_total.end_month }}</td>
+            </tr>
+        </tfoot>
+    </table>
+    
+    <!-- ✅ 2. 부자재비 -->
+    <h2>🔩 2. 부자재비</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>타입</th>
+                <th>수량</th>
+                <th>단가 (원)</th>
+                <th>금액 (원)</th>
+                <th>구매시작월</th>
+                <th>구매종료월</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data.submaterial %}
+            <tr>
+                <td>{{ row.SubmaterialType }}</td>
+                <td>{{ "{:,.0f}".format(row.TotalQuantity) }}</td>
+                <td>{{ "{:,.0f}".format(row.AvgPrice) }}</td>
+                <td>{{ "{:,.0f}".format(row.TotalAmount) }}</td>
+                <td>{{ row.StartMonth }}</td>
+                <td>{{ row.EndMonth }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
 </body>
 </html>
-

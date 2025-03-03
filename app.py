@@ -197,7 +197,7 @@ def query_database(site_code):
     """현장코드별 데이터 조회"""
     conn = get_db_connection()
     if conn is None:
-        return {"error": "DB 연결 실패!"}  # 🚀 튜플이 아닌 딕셔너리로 반환
+        return {"error": "DB 연결 실패!"}
 
     try:
         with conn:
@@ -212,12 +212,15 @@ def query_database(site_code):
             df_summary = pd.read_sql(query_summary, conn)
 
             if df_summary.empty:
-                return {"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}  
+                return {"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}
 
             # ✅ 2. 자재비 조회
             query_material = f"""
                 SELECT s.TGType, SUM(s.ShipmentQuantity) AS TotalQuantity, 
-                       SUM(s.ShipmentQuantity * u.Price) AS TotalAmount
+                       AVG(u.Price) AS AvgPrice,
+                       SUM(s.ShipmentQuantity * u.Price) AS TotalAmount,
+                       MIN(s.Month) AS StartMonth,
+                       MAX(s.Month) AS EndMonth
                 FROM dbo.ShipmentStatus s
                 JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
                 WHERE s.SiteCode = N'{site_code}'
@@ -225,15 +228,34 @@ def query_database(site_code):
             """
             df_material = pd.read_sql(query_material, conn)
 
+            # ✅ 자재비 소계 계산
+            material_total = {
+                "total_quantity": df_material["TotalQuantity"].sum(),
+                "total_amount": df_material["TotalAmount"].sum(),
+                "start_month": df_material["StartMonth"].min(),
+                "end_month": df_material["EndMonth"].max()
+            }
+
             # ✅ 3. 부자재비 조회
             query_submaterial = f"""
                 SELECT SubmaterialType, SUM(Quantity) AS TotalQuantity, 
-                       SUM(Amount) AS TotalAmount, AVG(SubPrice) AS AvgPrice
+                       AVG(SubPrice) AS AvgPrice,
+                       SUM(Amount) AS TotalAmount,
+                       MIN(Month) AS StartMonth,
+                       MAX(Month) AS EndMonth
                 FROM dbo.ExecutionStatus
                 WHERE SiteCode = N'{site_code}'
                 GROUP BY SubmaterialType
             """
             df_submaterial = pd.read_sql(query_submaterial, conn)
+
+            # ✅ 부자재비 소계 계산
+            submaterial_total = {
+                "total_quantity": df_submaterial["TotalQuantity"].sum(),
+                "total_amount": df_submaterial["TotalAmount"].sum(),
+                "start_month": df_submaterial["StartMonth"].min(),
+                "end_month": df_submaterial["EndMonth"].max()
+            }
 
             # ✅ 4. 현장상세조회
             query_details = f"""
@@ -246,23 +268,19 @@ def query_database(site_code):
             """
             df_details = pd.read_sql(query_details, conn)
 
-            if df_details.empty:
-                print("❌ 현장상세조회 실패: 결과 없음.")
-            else:
-                print(f"✅ 현장상세조회 성공: {df_details.to_dict()}")
-
+            return {
+                "summary": df_summary.to_dict("records"),
+                "material": df_material.to_dict("records"),
+                "material_total": material_total,  # ✅ 자재비 소계 추가
+                "submaterial": df_submaterial.to_dict("records"),
+                "submaterial_total": submaterial_total,  # ✅ 부자재비 소계 추가
+                "details": df_details.to_dict("records")
+            }
     except Exception as e:
         import traceback
         error_message = traceback.format_exc()
         print(f"❌ 데이터 조회 오류: {error_message}")
-        return {"error": str(e), "traceback": error_message}  
-
-    return {
-        "summary": df_summary.to_dict("records"),
-        "material": df_material.to_dict("records"),
-        "submaterial": df_submaterial.to_dict("records"),
-        "details": df_details.to_dict("records")
-    }
+        return {"error": str(e)}
 
 
 # 🚀 500 Internal Server Error 핸들링 (오류 메시지를 JSON으로 반환)
