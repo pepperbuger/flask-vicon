@@ -139,33 +139,45 @@ def home():
     return redirect(url_for("dashboard"))  # 🚀 로그인된 사용자는 대시보드로 이동
 
 # ✅ 대시보드 (로그인 필요)
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+import pyodbc
+import pandas as pd
+import os
+import sys
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from dotenv import load_dotenv
+import requests
+
+# ✅ Flask 앱 생성
+app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "your_fallback_secret")  # 세션을 사용하려면 secret_key 필요
+
+
 @app.route("/dashboard", methods=["GET", "POST"])
 @login_required
 def dashboard():
-    data = None  # 🔹 데이터를 유지하기 위한 변수
+    data = session.get("data", None)  # 🔹 세션에서 데이터를 가져오기
 
     if request.method == "POST":
         site_code = request.form.get("site_code")
-        print(f"🔍 입력된 현장코드 (원본): '{site_code}'")  
+        print(f"🔍 입력된 현장코드 (원본): '{site_code}'")
 
         if not site_code:
             return render_template("index.html", error="❌ 현장코드를 입력하세요.")
 
-        site_code = site_code.strip()  
-
-        print(f"🔍 변환된 site_code: '{site_code}'")  
+        site_code = site_code.strip()
+        print(f"🔍 변환된 site_code: '{site_code}'")
 
         data = query_database(site_code)
-        
-        # ✅ JSON 데이터 형식인지 확인
-        if isinstance(data, tuple):
-            data = data[0]  # 튜플이면 첫 번째 요소만 사용
+
+        # ✅ 조회된 데이터를 세션에 저장 (브라우저 새로고침해도 유지됨)
+        session["data"] = data
 
         if "error" in data:
-            return render_template("index.html", error=data["error"])  
+            return render_template("index.html", error=data["error"])
 
-    # 🔹 데이터가 None이 아닐 경우 유지하면서 렌더링
     return render_template("index.html", data=data)
+
 
 
 # ✅ 데이터 조회 함수

@@ -19,16 +19,16 @@
             </tr>
         </thead>
         <tbody>
-            {% for row in data %}
+            {% for row in data['details'] %}
             <tr>
-                <td>{{ row[0] }}</td>
-                <td>{{ row[1] }}</td>
-                <td>{{ row[2] }}</td>
-                <td>{{ row[3] }}</td>
-                <td>{{ row[4] }}</td>
-                <td>{{ row[5] }}</td>
+                <td>{{ row["SiteCode"] }}</td>
+                <td>{{ row["TGType"] }}</td>
+                <td>{{ row["Month"] }}</td>
+                <td>{{ "{:,.2f}".format(row["ShipmentQuantity"]) }}</td>
+                <td>{{ "{:,.0f}".format(row["Price"]) }}</td>
+                <td>{{ "{:,.0f}".format(row["Amount"]) }}</td>
             </tr>
-            {% endfor %}
+            {% endfor %}            
         </tbody>
     </table>
     <a href="/" class="btn btn-secondary">다시 조회</a>
