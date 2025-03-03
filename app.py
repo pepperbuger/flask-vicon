@@ -168,10 +168,10 @@ def query_database(site_code):
         with conn:
             print(f"🔍 DB에서 조회 중: SiteCode={site_code}")  # 🚀 현장코드 확인용 로그 추가
             
-            # ✅ 1. 요약 정보 조회 (format 적용)
+            # ✅ 1. 요약 정보 조회 (`dbo.SiteInfo`로 변경)
             query_summary = f"""
                 SELECT SiteCode, SiteName, Quantity, ContractAmount 
-                FROM SiteInfo WHERE SiteCode = '{site_code}'
+                FROM dbo.SiteInfo WHERE SiteCode = '{site_code}'
             """
             df_summary = pd.read_sql(query_summary, conn)
             if df_summary.empty:
@@ -179,33 +179,33 @@ def query_database(site_code):
             else:
                 print(f"✅ 요약 정보 조회 성공: {df_summary.to_dict()}")
 
-            # ✅ 2. 자재비 조회 (format 적용)
+            # ✅ 2. 자재비 조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice`로 변경)
             query_material = f"""
                 SELECT s.TGType, SUM(s.ShipmentQuantity) AS TotalQuantity, 
                        SUM(s.ShipmentQuantity * u.Price) AS TotalAmount
-                FROM ShipmentStatus s
-                JOIN UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
+                FROM dbo.ShipmentStatus s
+                JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
                 WHERE s.SiteCode = '{site_code}'
                 GROUP BY s.TGType
             """
             df_material = pd.read_sql(query_material, conn)
 
-            # ✅ 3. 부자재비 조회 (format 적용)
+            # ✅ 3. 부자재비 조회 (`dbo.ExecutionStatus`로 변경)
             query_submaterial = f"""
                 SELECT SubmaterialType, SUM(Quantity) AS TotalQuantity, 
                        SUM(Amount) AS TotalAmount, AVG(SubPrice) AS AvgPrice
-                FROM ExecutionStatus
+                FROM dbo.ExecutionStatus
                 WHERE SiteCode = '{site_code}'
                 GROUP BY SubmaterialType
             """
             df_submaterial = pd.read_sql(query_submaterial, conn)
 
-            # ✅ 4. 현장상세조회 (format 적용)
+            # ✅ 4. 현장상세조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice`로 변경)
             query_details = f"""
                 SELECT s.SiteCode, s.TGType, s.Month, s.ShipmentQuantity, 
                        u.Price, (s.ShipmentQuantity * u.Price) AS Amount
-                FROM ShipmentStatus s
-                LEFT JOIN UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
+                FROM dbo.ShipmentStatus s
+                LEFT JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
                 WHERE s.SiteCode = '{site_code}'
                 ORDER BY s.Month, s.TGType
             """
@@ -218,10 +218,3 @@ def query_database(site_code):
     except Exception as e:
         print(f"❌ 데이터 조회 오류: {e}")  # 🚨 오류 출력 추가
         return None
-
-    return {
-        "summary": df_summary.to_dict("records"),
-        "material": df_material.to_dict("records"),
-        "submaterial": df_submaterial.to_dict("records"),
-        "details": df_details.to_dict("records")
-    }
