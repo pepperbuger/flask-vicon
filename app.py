@@ -142,12 +142,14 @@ def home():
 @app.route("/dashboard", methods=["GET", "POST"])
 @login_required
 def dashboard():
+    data = None  # 🔹 데이터를 유지하기 위한 변수
+
     if request.method == "POST":
         site_code = request.form.get("site_code")
         print(f"🔍 입력된 현장코드 (원본): '{site_code}'")  
 
         if not site_code:
-            return "❌ 현장코드를 입력하세요.", 400  
+            return render_template("index.html", error="❌ 현장코드를 입력하세요.")
 
         site_code = site_code.strip()  
 
@@ -162,9 +164,8 @@ def dashboard():
         if "error" in data:
             return render_template("index.html", error=data["error"])  
 
-        return render_template("index.html", data=data)  
-
-    return render_template("index.html")
+    # 🔹 데이터가 None이 아닐 경우 유지하면서 렌더링
+    return render_template("index.html", data=data)
 
 
 # ✅ 데이터 조회 함수
@@ -195,7 +196,6 @@ def query_database(site_code):
             df_summary = pd.read_sql(query_summary, conn)
 
             if df_summary.empty:
-                print(f"❌ '{site_code}'에 해당하는 데이터 없음.")
                 return {"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}  
 
             # ✅ 2. 자재비 조회
