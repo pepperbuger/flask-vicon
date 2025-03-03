@@ -142,37 +142,63 @@ def home():
 def dashboard():
     if request.method == "POST":
         site_code = request.form.get("site_code")
-        print(f"🔍 입력된 현장코드 (원본): {site_code}")  # 🚀 로그 추가
+        print(f"🔍 입력된 현장코드 (원본): '{site_code}'")  
+        sys.stdout.flush()
 
         if not site_code:
             return "❌ 현장코드를 입력하세요.", 400  # 🚨 입력이 없을 경우 오류 메시지 반환
         
         # 🔹 한글 데이터 `Unicode` 변환 확인
-        site_code = site_code.strip()  # 🔹 앞뒤 공백 제거 (안정성 확보)
+        site_code = site_code.strip()  # 🔹 앞뒤 공백 제거
 
-        print(f"🔍 변환된 site_code: {site_code}")  # 🚀 변환된 코드 확인
+        print(f"🔍 변환된 site_code: '{site_code}'")  
+        sys.stdout.flush()
 
         data = query_database(site_code)
         if not data:
-            return "❌ 데이터 조회 실패: 결과가 없습니다.", 404  # 🚨 데이터가 없는 경우 오류 메시지 반환
+            return render_template("index.html", error="❌ 데이터 조회 실패: 결과가 없습니다.")  # 🚨 템플릿에서 에러 표시
         
-        return render_template("index.html", data=data)
+        return render_template("index.html", data=data)  # 🚀 정상적으로 데이터가 있는 경우 렌더링
 
     return render_template("index.html")
 
+
 # ✅ 데이터 조회 함수
+from flask import jsonify  # JSON 응답을 위한 모듈 추가
+
 def query_database(site_code):
     """현장코드별 데이터 조회"""
     conn = get_db_connection()
     if conn is None:
         print("❌ DB 연결 실패! 데이터 조회 불가.")
-        sys.stdout.flush()  # 🔹 로그 강제 출력
-        return None
+        sys.stdout.flush()
+        return None  # 🚨 오류 발생 시 None 반환
 
     try:
         with conn:
             print(f"🔍 DB에서 조회 중: SiteCode='{site_code}', 길이: {len(site_code)}")  
-            sys.stdout.flush()  # 🔹 로그 강제 출력
+            sys.stdout.flush()
+
+            # ✅ 1. 요약 정보 조회
+            query_summary = f"""
+                SELECT SiteCode, SiteName, Quantity, ContractAmount 
+                FROM dbo.SiteInfo 
+                WHERE SiteCode = N'{site_code}'
+            """
+            df_summary = pd.read_sql(query_summary, conn)
+
+            if df_summary.empty:
+                print(f"❌ '{site_code}'에 해당하는 데이터 없음.")
+                sys.stdout.flush()
+                return None  # 🚨 오류 발생 시 None 반환
+
+    except Exception as e:
+        print(f"❌ 데이터 조회 오류: {e}")  
+        sys.stdout.flush()
+        return None  # 🚨 오류 발생 시 None 반환
+
+    return {"summary": df_summary.to_dict("records")}
+
 
             # ✅ 1. 요약 정보 조회
             query_summary = f"""
