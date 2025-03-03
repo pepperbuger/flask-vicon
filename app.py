@@ -160,7 +160,6 @@ def dashboard():
 
     return render_template("index.html")
 
-
 # ✅ 데이터 조회 함수
 def query_database(site_code):
     """현장코드별 데이터 조회"""
@@ -190,39 +189,29 @@ def query_database(site_code):
                 print(f"✅ 요약 정보 조회 성공: {df_summary.to_dict()}")
                 sys.stdout.flush()  # 🔹 로그 강제 출력
 
-    except Exception as e:
-        print(f"❌ 데이터 조회 오류: {e}")  
-        sys.stdout.flush()  # 🔹 로그 강제 출력
-        return None
-
-    return {"summary": df_summary.to_dict("records")}
-
-
-            # ✅ 2. 자재비 조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice` + SQL 바인딩 사용)
-            query_material = """
+            # ✅ 2. 자재비 조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice`)
+            query_material = f"""
                 SELECT s.TGType, SUM(s.ShipmentQuantity) AS TotalQuantity, 
                        SUM(s.ShipmentQuantity * u.Price) AS TotalAmount
                 FROM dbo.ShipmentStatus s
                 JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-                WHERE SiteCode = N'{site_code}'
+                WHERE s.SiteCode = N'{site_code}'
                 GROUP BY s.TGType
             """
-            #df_material = pd.read_sql(query_material, conn, params=[site_code])
             df_material = pd.read_sql(query_material, conn)
 
-            # ✅ 3. 부자재비 조회 (`dbo.ExecutionStatus` + SQL 바인딩 사용)
-            query_submaterial = """
+            # ✅ 3. 부자재비 조회 (`dbo.ExecutionStatus`)
+            query_submaterial = f"""
                 SELECT SubmaterialType, SUM(Quantity) AS TotalQuantity, 
                        SUM(Amount) AS TotalAmount, AVG(SubPrice) AS AvgPrice
                 FROM dbo.ExecutionStatus
                 WHERE SiteCode = N'{site_code}'
                 GROUP BY SubmaterialType
             """
-            #df_submaterial = pd.read_sql(query_submaterial, conn, params=[site_code])
             df_submaterial = pd.read_sql(query_submaterial, conn)
 
-            # ✅ 4. 현장상세조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice` + SQL 바인딩 사용)
-            query_details = """
+            # ✅ 4. 현장상세조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice`)
+            query_details = f"""
                 SELECT s.SiteCode, s.TGType, s.Month, s.ShipmentQuantity, 
                        u.Price, (s.ShipmentQuantity * u.Price) AS Amount
                 FROM dbo.ShipmentStatus s
@@ -230,16 +219,18 @@ def query_database(site_code):
                 WHERE s.SiteCode = N'{site_code}'
                 ORDER BY s.Month, s.TGType
             """
-            #df_details = pd.read_sql(query_details, conn, params=[site_code])
             df_details = pd.read_sql(query_details, conn)
 
             if df_details.empty:
                 print("❌ 현장상세조회 실패: 결과 없음.")
+                sys.stdout.flush()  # 🔹 로그 강제 출력
             else:
                 print(f"✅ 현장상세조회 성공: {df_details.to_dict()}")
+                sys.stdout.flush()  # 🔹 로그 강제 출력
 
     except Exception as e:
         print(f"❌ 데이터 조회 오류: {e}")  # 🚨 오류 출력 추가
+        sys.stdout.flush()  # 🔹 로그 강제 출력
         return None
 
     return {
