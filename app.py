@@ -6,6 +6,8 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from decimal import Decimal
 from dotenv import load_dotenv
 import requests
+import sys  # 🚀 sys 모듈 추가
+
 
 # ✅ 환경 변수 로드
 load_dotenv()
@@ -143,7 +145,7 @@ def dashboard():
     if request.method == "POST":
         site_code = request.form.get("site_code")
         print(f"🔍 입력된 현장코드 (원본): '{site_code}'")  
-        sys.stdout.flush()
+        
 
         if not site_code:
             return "❌ 현장코드를 입력하세요.", 400  # 🚨 입력이 없을 경우 오류 메시지 반환
@@ -152,7 +154,7 @@ def dashboard():
         site_code = site_code.strip()  # 🔹 앞뒤 공백 제거
 
         print(f"🔍 변환된 site_code: '{site_code}'")  
-        sys.stdout.flush()
+        
 
         data = query_database(site_code)
         if not data:
@@ -181,7 +183,7 @@ def query_database(site_code):
     try:
         with conn:
             print(f"🔍 DB에서 조회 중: SiteCode='{site_code}', 길이: {len(site_code)}")  
-            sys.stdout.flush()
+            
 
             # ✅ 1. 요약 정보 조회
             query_summary = f"""
@@ -202,7 +204,7 @@ def query_database(site_code):
     try:
         with conn:
             print(f"🔍 DB에서 조회 중: SiteCode='{site_code}', 길이: {len(site_code)}")  
-            sys.stdout.flush()
+            
 
             # ✅ 1. 요약 정보 조회 (여기 들여쓰기 확인!)
             query_summary = f"""
@@ -214,7 +216,7 @@ def query_database(site_code):
 
             if df_summary.empty:
                 print(f"❌ '{site_code}'에 해당하는 데이터 없음.")
-                sys.stdout.flush()
+                
                 return None  # 🚨 오류 발생 시 None 반환
 
             # ✅ 2. 자재비 조회 (들여쓰기 확인!)
@@ -251,14 +253,14 @@ def query_database(site_code):
 
             if df_details.empty:
                 print("❌ 현장상세조회 실패: 결과 없음.")
-                sys.stdout.flush()
+                
             else:
                 print(f"✅ 현장상세조회 성공: {df_details.to_dict()}")
-                sys.stdout.flush()
+                
 
     except Exception as e:
         print(f"❌ 데이터 조회 오류: {e}")  
-        sys.stdout.flush()
+        
         return None
 
     return {
