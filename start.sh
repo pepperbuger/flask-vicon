@@ -7,4 +7,3 @@ echo "🚀 Using PORT: ${PORT}"
 
 # ✅ 올바른 Waitress 실행 방식
 exec waitress-serve --port=$PORT app:app
- --log-level debug
