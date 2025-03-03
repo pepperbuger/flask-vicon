@@ -1,8 +1,5 @@
-from app import app
-from waitress import serve
-import os
+from app import app  # Flask 앱 가져오기
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001))  # Railway에서 할당된 포트 사용
-    print(f"🚀 Starting Waitress on port {port}...")
-    serve(app, host="0.0.0.0", port=port, threads=4)
+    # 🚀 이제 `waitress` 실행은 `start.sh`에서 처리하므로 필요 없음
+    app.run()  # 로컬 개발용 (Railway 배포에서는 사용되지 않음)
