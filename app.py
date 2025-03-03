@@ -267,3 +267,11 @@ def query_database(site_code):
         "submaterial": df_submaterial.to_dict("records"),
         "details": df_details.to_dict("records")
     }
+
+# 🚀 500 Internal Server Error 핸들링 (오류 메시지를 JSON으로 반환)
+@app.errorhandler(500)
+def internal_server_error(e):
+    import traceback
+    error_message = traceback.format_exc()  # 전체 오류 스택 추적
+    print(f"❌ Internal Server Error: {error_message}")  # 콘솔에도 출력
+    return jsonify({"error": str(e), "traceback": error_message}), 500
