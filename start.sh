@@ -5,5 +5,6 @@ echo "🚀 Starting production server with Waitress..."
 PORT=${PORT:-5001}
 echo "🚀 Using PORT: ${PORT}"
 
-# Waitress 실행 (디버그 로그 활성화)
-exec python -m waitress --listen=0.0.0.0:$PORT app:app --log-level debug
+# ✅ 올바른 Waitress 실행 방식
+exec waitress-serve --port=$PORT app:app
+ --log-level debug
