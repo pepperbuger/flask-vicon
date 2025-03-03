@@ -171,7 +171,7 @@ def query_database(site_code):
             # ✅ 1. 요약 정보 조회 (`dbo.SiteInfo`로 변경)
             query_summary = f"""
                 SELECT SiteCode, SiteName, Quantity, ContractAmount 
-                FROM dbo.SiteInfo WHERE SiteCode = '{site_code}'
+                FROM dbo.SiteInfo WHERE SiteCode COLLATE Korean_Wansung_CI_AS = N'{site_code}'
             """
             df_summary = pd.read_sql(query_summary, conn)
             if df_summary.empty:
@@ -185,7 +185,7 @@ def query_database(site_code):
                        SUM(s.ShipmentQuantity * u.Price) AS TotalAmount
                 FROM dbo.ShipmentStatus s
                 JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-                WHERE s.SiteCode = '{site_code}'
+                WHERE s.SiteCode COLLATE Korean_Wansung_CI_AS = N'{site_code}'
                 GROUP BY s.TGType
             """
             df_material = pd.read_sql(query_material, conn)
@@ -195,7 +195,7 @@ def query_database(site_code):
                 SELECT SubmaterialType, SUM(Quantity) AS TotalQuantity, 
                        SUM(Amount) AS TotalAmount, AVG(SubPrice) AS AvgPrice
                 FROM dbo.ExecutionStatus
-                WHERE SiteCode = '{site_code}'
+                WHERE SiteCode COLLATE Korean_Wansung_CI_AS = N'{site_code}'
                 GROUP BY SubmaterialType
             """
             df_submaterial = pd.read_sql(query_submaterial, conn)
@@ -206,7 +206,7 @@ def query_database(site_code):
                        u.Price, (s.ShipmentQuantity * u.Price) AS Amount
                 FROM dbo.ShipmentStatus s
                 LEFT JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-                WHERE s.SiteCode = '{site_code}'
+                WHERE s.SiteCode COLLATE Korean_Wansung_CI_AS = N'{site_code}'
                 ORDER BY s.Month, s.TGType
             """
             df_details = pd.read_sql(query_details, conn)
