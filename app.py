@@ -5,6 +5,8 @@ import os
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from decimal import Decimal
 from dotenv import load_dotenv
+import requests
+
 
 # 환경 변수 로드
 load_dotenv()
@@ -12,6 +14,15 @@ load_dotenv()
 # ✅ Flask 앱 생성
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "your_fallback_secret")  # 환경 변수에서 가져오고 없으면 기본값 사용
+
+@app.route("/check-ip")
+def check_ip():
+    try:
+        my_ip = requests.get("https://api64.ipify.org?format=json").json()["ip"]
+        return f"🚀 Railway 서버의 현재 외부 IP: {my_ip}"
+    except Exception as e:
+        return f"❌ IP 확인 실패: {e}"
+
 
 # ✅ 환경 변수 설정
 DBHOST = os.environ.get("DBHOST", "MISSING_DBHOST")
