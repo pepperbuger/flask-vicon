@@ -9,4 +9,5 @@ export FLASK_APP=wsgi.py
 export FLASK_DEBUG=true  # 디버깅 활성화
 
 # Waitress 실행 (PORT 자동 감지)
-exec python wsgi.py
+exec python wsgi.py --log-level debug
+
