@@ -165,14 +165,39 @@ def dashboard():
 
 # ✅ 데이터 조회 함수
 from flask import jsonify  # JSON 응답을 위한 모듈 추가
+@app.errorhandler(500)
+def internal_server_error(e):
+    return jsonify({"error": str(e)}), 500
+
+# 웹브라우저에 디버그 표시
+app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "false").lower() == "true"    
 
 def query_database(site_code):
     """현장코드별 데이터 조회"""
     conn = get_db_connection()
     if conn is None:
-        print("❌ DB 연결 실패! 데이터 조회 불가.")
-        sys.stdout.flush()
-        return None
+        return jsonify({"error": "DB 연결 실패!"}), 500  # 🚨 오류 메시지를 JSON 응답으로 반환
+
+    try:
+        with conn:
+            print(f"🔍 DB에서 조회 중: SiteCode='{site_code}', 길이: {len(site_code)}")  
+            sys.stdout.flush()
+
+            # ✅ 1. 요약 정보 조회
+            query_summary = f"""
+                SELECT SiteCode, SiteName, Quantity, ContractAmount 
+                FROM dbo.SiteInfo 
+                WHERE SiteCode = N'{site_code}'
+            """
+            df_summary = pd.read_sql(query_summary, conn)
+
+            if df_summary.empty:
+                return jsonify({"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}), 404
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500  # 🚨 오류 메시지를 JSON으로 반환
+
+    return jsonify({"summary": df_summary.to_dict("records")})
 
     try:
         with conn:
