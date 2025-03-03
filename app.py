@@ -136,18 +136,22 @@ def home():
         return redirect(url_for("login"))  # 🚀 로그인 페이지로 이동
     return redirect(url_for("dashboard"))  # 🚀 로그인된 사용자는 대시보드로 이동
 
-
 # ✅ 대시보드 (로그인 필요)
 @app.route("/dashboard", methods=["GET", "POST"])
 @login_required
 def dashboard():
     if request.method == "POST":
         site_code = request.form.get("site_code")
+        print(f"🔍 입력된 현장코드 (원본): {site_code}")  # 🚀 로그 추가
+
         if not site_code:
             return "❌ 현장코드를 입력하세요.", 400  # 🚨 입력이 없을 경우 오류 메시지 반환
         
-        print(f"🔍 입력된 현장코드: {site_code}")  # 🚀 현장코드 확인용 로그 추가
-        
+        # 🔹 한글 데이터 `Unicode` 변환 확인
+        site_code = site_code.strip()  # 🔹 앞뒤 공백 제거 (안정성 확보)
+
+        print(f"🔍 변환된 site_code: {site_code}")  # 🚀 변환된 코드 확인
+
         data = query_database(site_code)
         if not data:
             return "❌ 데이터 조회 실패: 결과가 없습니다.", 404  # 🚨 데이터가 없는 경우 오류 메시지 반환
@@ -157,6 +161,7 @@ def dashboard():
     return render_template("index.html")
 
 
+# ✅ 데이터 조회 함수
 def query_database(site_code):
     """현장코드별 요약 정보, 자재비, 부자재비, 현장상세조회 데이터를 조회"""
     conn = get_db_connection()
@@ -167,49 +172,52 @@ def query_database(site_code):
     try:
         with conn:
             print(f"🔍 DB에서 조회 중: SiteCode={site_code}")  # 🚀 현장코드 확인용 로그 추가
-            
-            # ✅ 1. 요약 정보 조회 (`dbo.SiteInfo`로 변경)
-            query_summary = f"""
+
+            # ✅ 1. 요약 정보 조회 (`dbo.SiteInfo` + COLLATE 적용 + SQL 바인딩 사용)
+            query_summary = """
                 SELECT SiteCode, SiteName, Quantity, ContractAmount 
-                FROM dbo.SiteInfo WHERE SiteCode COLLATE Korean_Wansung_CI_AS = N'{site_code}'
+                FROM dbo.SiteInfo 
+                WHERE SiteCode COLLATE Korean_Unicode_CI_AS = ?
             """
-            df_summary = pd.read_sql(query_summary, conn)
+            df_summary = pd.read_sql(query_summary, conn, params=[site_code])
+
             if df_summary.empty:
                 print("❌ 요약 정보 조회 실패: 결과 없음.")
             else:
                 print(f"✅ 요약 정보 조회 성공: {df_summary.to_dict()}")
 
-            # ✅ 2. 자재비 조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice`로 변경)
-            query_material = f"""
+            # ✅ 2. 자재비 조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice` + SQL 바인딩 사용)
+            query_material = """
                 SELECT s.TGType, SUM(s.ShipmentQuantity) AS TotalQuantity, 
                        SUM(s.ShipmentQuantity * u.Price) AS TotalAmount
                 FROM dbo.ShipmentStatus s
                 JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-                WHERE s.SiteCode COLLATE Korean_Wansung_CI_AS = N'{site_code}'
+                WHERE s.SiteCode COLLATE Korean_Unicode_CI_AS = ?
                 GROUP BY s.TGType
             """
-            df_material = pd.read_sql(query_material, conn)
+            df_material = pd.read_sql(query_material, conn, params=[site_code])
 
-            # ✅ 3. 부자재비 조회 (`dbo.ExecutionStatus`로 변경)
-            query_submaterial = f"""
+            # ✅ 3. 부자재비 조회 (`dbo.ExecutionStatus` + SQL 바인딩 사용)
+            query_submaterial = """
                 SELECT SubmaterialType, SUM(Quantity) AS TotalQuantity, 
                        SUM(Amount) AS TotalAmount, AVG(SubPrice) AS AvgPrice
                 FROM dbo.ExecutionStatus
-                WHERE SiteCode COLLATE Korean_Wansung_CI_AS = N'{site_code}'
+                WHERE SiteCode COLLATE Korean_Unicode_CI_AS = ?
                 GROUP BY SubmaterialType
             """
-            df_submaterial = pd.read_sql(query_submaterial, conn)
+            df_submaterial = pd.read_sql(query_submaterial, conn, params=[site_code])
 
-            # ✅ 4. 현장상세조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice`로 변경)
-            query_details = f"""
+            # ✅ 4. 현장상세조회 (`dbo.ShipmentStatus`, `dbo.UnitPrice` + SQL 바인딩 사용)
+            query_details = """
                 SELECT s.SiteCode, s.TGType, s.Month, s.ShipmentQuantity, 
                        u.Price, (s.ShipmentQuantity * u.Price) AS Amount
                 FROM dbo.ShipmentStatus s
                 LEFT JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-                WHERE s.SiteCode COLLATE Korean_Wansung_CI_AS = N'{site_code}'
+                WHERE s.SiteCode COLLATE Korean_Unicode_CI_AS = ?
                 ORDER BY s.Month, s.TGType
             """
-            df_details = pd.read_sql(query_details, conn)
+            df_details = pd.read_sql(query_details, conn, params=[site_code])
+
             if df_details.empty:
                 print("❌ 현장상세조회 실패: 결과 없음.")
             else:
@@ -218,3 +226,10 @@ def query_database(site_code):
     except Exception as e:
         print(f"❌ 데이터 조회 오류: {e}")  # 🚨 오류 출력 추가
         return None
+
+    return {
+        "summary": df_summary.to_dict("records"),
+        "material": df_material.to_dict("records"),
+        "submaterial": df_submaterial.to_dict("records"),
+        "details": df_details.to_dict("records")
+    }
