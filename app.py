@@ -6,6 +6,7 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from flask_session import Session  # Flask-Session 추가
 from dotenv import load_dotenv
 import io
+from sqlalchemy import create_engine
 
 # ✅ 환경 변수 로드
 load_dotenv()
@@ -287,7 +288,18 @@ def query_database(site_code):
         error_message = traceback.format_exc()
         print(f"❌ 데이터 조회 오류: {error_message}")
         return {"error": str(e)}
-        
+
+
+# 엑셀생성---
+# SQLAlchemy 엔진 생성
+engine = create_engine("mssql+pyodbc://DBUSER:DBPASSWORD@DBHOST:1433/DBNAME?driver=ODBC+Driver+17+for+SQL+Server")
+
+# SQL 쿼리 실행
+df_summary = pd.read_sql(query_summary, engine)
+df_material = pd.read_sql(query_material, engine)
+df_submaterial = pd.read_sql(query_submaterial, engine)
+df_details = pd.read_sql(query_details, engine)
+
 @app.route("/download_excel")
 @login_required
 def download_excel():
