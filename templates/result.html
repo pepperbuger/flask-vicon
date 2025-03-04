@@ -17,7 +17,10 @@
         <li class="list-group-item"><strong>계약금액:</strong> {{ "{:,.0f}".format(data['summary'][0]['ContractAmount']) }} 원</li>
     </ul>
     {% endif %}
-
+    <div class="mt-4">
+        <a href="{{ url_for('download_excel') }}" class="btn btn-success">📥 엑셀 다운로드</a>
+    </div>
+    
     <!-- ✅ 1. 자재비 -->
     <h2>🏗️ 1. 자재비</h2>
     <table class="table table-bordered">

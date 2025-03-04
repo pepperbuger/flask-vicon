@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file
 import pyodbc
 import pandas as pd
 import os
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required
 from flask_session import Session  # Flask-Session 추가
 from dotenv import load_dotenv
+import io
 
 # ✅ 환경 변수 로드
 load_dotenv()
@@ -286,6 +287,51 @@ def query_database(site_code):
         error_message = traceback.format_exc()
         print(f"❌ 데이터 조회 오류: {error_message}")
         return {"error": str(e)}
+        
+@app.route("/download_excel")
+@login_required
+def download_excel():
+    data = session.get("data", None)
+    if not data:
+        return "데이터가 없습니다.", 400  # 데이터 없으면 오류 반환
+
+    output = io.BytesIO()  # 메모리 내에서 엑셀 생성
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        
+        # ✅ 1️⃣ 요약 정보 시트 추가
+        if "summary" in data and data["summary"]:
+            df_summary = pd.DataFrame(data["summary"])
+            df_summary.to_excel(writer, sheet_name="요약 정보", index=False)
+        
+        # ✅ 2️⃣ 자재비 시트 추가 (소계 포함)
+        if "material" in data and data["material"]:
+            df_material = pd.DataFrame(data["material"])
+            df_material.to_excel(writer, sheet_name="자재비", index=False)
+
+            # 자재비 합계 추가
+            total_material_quantity = df_material["TotalQuantity"].sum()
+            total_material_amount = df_material["TotalAmount"].sum()
+            summary_df = pd.DataFrame([{"TGType": "소계", "TotalQuantity": total_material_quantity, "TotalAmount": total_material_amount}])
+            summary_df.to_excel(writer, sheet_name="자재비", index=False, startrow=len(df_material) + 2)
+
+        # ✅ 3️⃣ 부자재비 시트 추가 (소계 포함)
+        if "submaterial" in data and data["submaterial"]:
+            df_submaterial = pd.DataFrame(data["submaterial"])
+            df_submaterial.to_excel(writer, sheet_name="부자재비", index=False)
+
+            # 부자재비 합계 추가
+            total_submaterial_quantity = df_submaterial["TotalQuantity"].sum()
+            total_submaterial_amount = df_submaterial["TotalAmount"].sum()
+            summary_df = pd.DataFrame([{"SubmaterialType": "소계", "TotalQuantity": total_submaterial_quantity, "TotalAmount": total_submaterial_amount}])
+            summary_df.to_excel(writer, sheet_name="부자재비", index=False, startrow=len(df_submaterial) + 2)
+
+        # ✅ 4️⃣ 현장 상세 조회 시트 추가
+        if "details" in data and data["details"]:
+            df_details = pd.DataFrame(data["details"])
+            df_details.to_excel(writer, sheet_name="현장상세조회", index=False)
+
+    output.seek(0)  # 파일 포인터를 처음으로 이동
+    return send_file(output, as_attachment=True, download_name="현장코드_조회결과.xlsx", mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")        
 
 # 🚀 500 Internal Server Error 핸들링 (오류 메시지를 JSON으로 반환)
 @app.errorhandler(500)
