@@ -75,8 +75,8 @@
             {% for row in data.get("submaterial", []) %}
             <tr>
                 <td>{{ row.get("SubmaterialType", "-") }}</td>
-                <td>{{ "{:,.0f}".format(row.get("TotalQuantity", 0)) }}</td>
                 <td>{{ "{:,.0f}".format(row.get("TotalAmount", 0)) }}</td>
+                <td>{{ "{:,.0f}".format(row.get("TotalQuantity", 0)) }}</td>
                 <td>{{ "{:,.0f}".format(row.get("AvgPrice", 0)) }}</td>
                 <td>{{ row.get("StartMonth", "-") }}</td>
                 <td>{{ row.get("EndMonth", "-") }}</td>
