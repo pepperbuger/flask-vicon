@@ -291,51 +291,93 @@ def query_database(site_code):
 
 # 엑셀생성---
 
-
 @app.route("/download_excel")
 @login_required
 def download_excel():
     data = session.get("data", None)
     if not data:
-        return "데이터가 없습니다.", 400  # 데이터 없으면 오류 반환
+        return "❌ 데이터가 없습니다.", 400
 
-    output = io.BytesIO()  # 메모리 내에서 엑셀 생성
+    output = io.BytesIO()
+
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        
-        # ✅ 1️⃣ 요약 정보 시트 추가
-        if "summary" in data and data["summary"]:
-            df_summary = pd.DataFrame(data["summary"])
-            df_summary.to_excel(writer, sheet_name="요약 정보", index=False)
-        
-        # ✅ 2️⃣ 자재비 시트 추가 (소계 포함)
+        workbook = writer.book
+
+        # ✅ 📌 1. 요약 정보 (현장 정보)
+        df_summary = pd.DataFrame(data["summary"])
+        df_summary = df_summary.rename(columns={
+            "SiteCode": "현장코드",
+            "SiteName": "현장명",
+            "Quantity": "계약물량 (㎡)",
+            "ContractAmount": "계약금액 (원)"
+        })
+        df_summary.to_excel(writer, sheet_name="요약정보", index=False)
+
+        # ✅ 🏗️ 2. 자재비
         if "material" in data and data["material"]:
             df_material = pd.DataFrame(data["material"])
+            df_material = df_material.rename(columns={
+                "TGType": "TG타입",
+                "TotalQuantity": "수량 (㎡)",
+                "AvgPrice": "단가 (원/㎡)",
+                "TotalAmount": "금액 (원)",
+                "StartMonth": "출고시작월",
+                "EndMonth": "출고종료월"
+            })
+
             df_material.to_excel(writer, sheet_name="자재비", index=False)
 
-            # 자재비 합계 추가
-            total_material_quantity = df_material["TotalQuantity"].sum()
-            total_material_amount = df_material["TotalAmount"].sum()
-            summary_df = pd.DataFrame([{"TGType": "소계", "TotalQuantity": total_material_quantity, "TotalAmount": total_material_amount}])
-            summary_df.to_excel(writer, sheet_name="자재비", index=False, startrow=len(df_material) + 2)
+            # ✅ 소계 추가
+            material_total = {
+                "TG타입": "소계",
+                "수량 (㎡)": df_material["수량 (㎡)"].sum(),
+                "단가 (원/㎡)": "-",
+                "금액 (원)": df_material["금액 (원)"].sum(),
+                "출고시작월": "-",
+                "출고종료월": "-"
+            }
+            df_material = df_material.append(material_total, ignore_index=True)
 
-        # ✅ 3️⃣ 부자재비 시트 추가 (소계 포함)
+            df_material.to_excel(writer, sheet_name="자재비", index=False)
+
+        # ✅ 🔩 3. 부자재비
         if "submaterial" in data and data["submaterial"]:
             df_submaterial = pd.DataFrame(data["submaterial"])
+            df_submaterial = df_submaterial.rename(columns={
+                "SubmaterialType": "타입",
+                "TotalQuantity": "수량",
+                "AvgPrice": "단가 (원)",
+                "TotalAmount": "금액 (원)",
+                "StartMonth": "구매시작월",
+                "EndMonth": "구매종료월"
+            })
+
             df_submaterial.to_excel(writer, sheet_name="부자재비", index=False)
 
-            # 부자재비 합계 추가
-            total_submaterial_quantity = df_submaterial["TotalQuantity"].sum()
-            total_submaterial_amount = df_submaterial["TotalAmount"].sum()
-            summary_df = pd.DataFrame([{"SubmaterialType": "소계", "TotalQuantity": total_submaterial_quantity, "TotalAmount": total_submaterial_amount}])
-            summary_df.to_excel(writer, sheet_name="부자재비", index=False, startrow=len(df_submaterial) + 2)
+            # ✅ 소계 추가
+            submaterial_total = {
+                "타입": "소계",
+                "수량": df_submaterial["수량"].sum(),
+                "단가 (원)": "-",
+                "금액 (원)": df_submaterial["금액 (원)"].sum(),
+                "구매시작월": "-",
+                "구매종료월": "-"
+            }
+            df_submaterial = df_submaterial.append(submaterial_total, ignore_index=True)
 
-        # ✅ 4️⃣ 현장 상세 조회 시트 추가
-        if "details" in data and data["details"]:
-            df_details = pd.DataFrame(data["details"])
-            df_details.to_excel(writer, sheet_name="현장상세조회", index=False)
+            df_submaterial.to_excel(writer, sheet_name="부자재비", index=False)
 
-    output.seek(0)  # 파일 포인터를 처음으로 이동
-    return send_file(output, as_attachment=True, download_name="현장코드_조회결과.xlsx", mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")        
+        # ✅ 📌 4. 엑셀 스타일 적용
+        for sheet in writer.sheets:
+            worksheet = writer.sheets[sheet]
+            worksheet.set_column("A:A", 20)  # 첫 번째 컬럼 너비 조정
+            worksheet.set_column("B:D", 15)  # 데이터 컬럼 너비 조정
+            worksheet.set_column("E:F", 12)  # 날짜 컬럼 너비 조정
+
+    output.seek(0)
+
+    return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     as_attachment=True, download_name="현장_조회결과.xlsx")      
 
 # 🚀 500 Internal Server Error 핸들링 (오류 메시지를 JSON으로 반환)
 @app.errorhandler(500)
