@@ -127,48 +127,30 @@ def logout():
     logout_user()
     return redirect(url_for("login"))
 
-# ✅ 대시보드 라우트
-@app.route("/dashboard", methods=["GET", "POST"])
-@login_required
-def dashboard():
-    if request.method == "POST":
-        site_code = request.form.get("site_code")
-        if not site_code:
-            return render_template("index.html", error="❌ 현장코드를 입력하세요.")
-
-        site_code = site_code.strip()
-        data = query_database(site_code)
-        session["data"] = data  # ✅ 세션에 데이터 저장
-
-        if "error" in data:
-            return render_template("index.html", error=data["error"])
-
-        return redirect(url_for("result"))  # ✅ 결과 페이지로 이동
-
-    return render_template("index.html")  # ✅ GET 요청 시 기본 페이지 유지
-
-# 대시보드 
-from flask import jsonify
-
+# ✅ 대시보드 페이지 (HTML 렌더링)
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html")
-    """로그인 후 보이는 대시보드 데이터"""
+    return render_template("dashboard.html")  # 🟢 로그인 후 대시보드 페이지 보여줌
+
+# ✅ 대시보드 데이터 API (차트용 데이터 제공)
+@app.route("/dashboard_data")
+@login_required
+def dashboard_data():
     conn = get_db_connection()
     if conn is None:
         return jsonify({"error": "DB 연결 실패!"})
 
     try:
         with conn:
-            # ✅ 최근 6개월 필터링
+            # ✅ 최근 6개월 조회
             recent_months_query = """
                 SELECT DISTINCT TOP 6 Month FROM ShipmentStatus ORDER BY Month DESC
             """
             recent_months = pd.read_sql(recent_months_query, conn)['Month'].tolist()
 
             # ✅ 1️⃣ 최근 6개월간 출고물량 비율 (DA, DS, KD, DC)
-            query_ratio = f"""
+            query_ratio = """
                 SELECT SiteCode, SUM(ShipmentQuantity) AS TotalQuantity
                 FROM ShipmentStatus
                 WHERE SiteCode LIKE '%(DA)' OR SiteCode LIKE '%(DS)'
@@ -189,7 +171,7 @@ def dashboard():
             df_price_trend = pd.read_sql(query_price_trend, conn)
             price_trend = df_price_trend.to_dict("records")
 
-            # ✅ 3️⃣ 최근 6개월 출고량 변화 (월별 합계)
+            # ✅ 3️⃣ 최근 6개월 출고량 변화
             query_shipment_trend = f"""
                 SELECT Month, SUM(ShipmentQuantity) AS TotalShipment
                 FROM ShipmentStatus
@@ -209,6 +191,7 @@ def dashboard():
         "shipment_trend": shipment_trend
     })
 
+    
 # ✅ 결과 페이지
 @app.route("/result")
 @login_required
