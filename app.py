@@ -149,49 +149,45 @@ def dashboard_data():
             """
             recent_months = pd.read_sql(recent_months_query, conn)['Month'].tolist()
 
-            # ✅ 1️⃣ 최근 6개월간 출고물량 비율 (DA, DS, KD, DC)
-            query_ratio = """
-                SELECT SiteCode, SUM(ShipmentQuantity) AS TotalQuantity
+            # ✅ 1️⃣ 최근 6개월간 출고물량 비율 (DC, KD, DA, DS)
+            query_shipment_trend = """
+                SELECT SiteCode, Month, SUM(ShipmentQuantity) AS TotalShipment
                 FROM ShipmentStatus
-                WHERE SiteCode LIKE '%(DA)' OR SiteCode LIKE '%(DS)'
-                      OR SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DC)'
-                GROUP BY SiteCode
-            """
-            df_ratio = pd.read_sql(query_ratio, conn)
-            site_ratio = df_ratio.to_dict("records")
+                WHERE Month IN ({})
+                GROUP BY SiteCode, Month
+                ORDER BY Month
+            """.format(",".join([f"'{m}'" for m in recent_months]))
+            
+            df_shipment_trend = pd.read_sql(query_shipment_trend, conn)
 
-            # ✅ 2️⃣ M12085(120), M13085(120) 단가 추이 (최근 6개월)
-            query_price_trend = f"""
+            # ✅ SiteCode에서 (DC), (KD), (DA), (DS) 추출
+            df_shipment_trend['Category'] = df_shipment_trend['SiteCode'].str.extract(r"\((DA|DS|KD|DC)\)$")
+
+            # ✅ 월별 합계 계산
+            shipment_grouped = df_shipment_trend.groupby(["Month", "Category"])["TotalShipment"].sum().reset_index()
+            shipment_trend = shipment_grouped.to_dict("records")
+
+            # ✅ 2️⃣ M12085(120), M13085(120) 단가 추이
+            query_price_trend = """
                 SELECT Month, AVG(CASE WHEN TGType IN ('M12085(120)', 'M13085(120)') THEN Price END) AS AvgPrice
                 FROM UnitPrice
-                WHERE Month IN ({','.join([f"'{m}'" for m in recent_months])})
+                WHERE Month IN ({})
                 GROUP BY Month
                 ORDER BY Month
-            """
+            """.format(",".join([f"'{m}'" for m in recent_months]))
+
             df_price_trend = pd.read_sql(query_price_trend, conn)
             price_trend = df_price_trend.to_dict("records")
-
-            # ✅ 3️⃣ 최근 6개월 출고량 변화
-            query_shipment_trend = f"""
-                SELECT Month, SUM(ShipmentQuantity) AS TotalShipment
-                FROM ShipmentStatus
-                WHERE Month IN ({','.join([f"'{m}'" for m in recent_months])})
-                GROUP BY Month
-                ORDER BY Month
-            """
-            df_shipment_trend = pd.read_sql(query_shipment_trend, conn)
-            shipment_trend = df_shipment_trend.to_dict("records")
 
     except Exception as e:
         return jsonify({"error": str(e)})
 
     return jsonify({
-        "site_ratio": site_ratio,
-        "price_trend": price_trend,
-        "shipment_trend": shipment_trend
+        "shipment_trend": shipment_trend,
+        "price_trend": price_trend
     })
 
-    
+
 # ✅ 결과 페이지
 @app.route("/result")
 @login_required
