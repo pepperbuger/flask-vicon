@@ -63,4 +63,20 @@
             });
 
             // 📌 3️⃣ 최근 6개월 출고량 변화 막대 그래프
-            const ctx3 = document.
+            const ctx3 = document.getElementById("shipmentTrendChart").getContext("2d");
+            new Chart(ctx3, {
+                type: "bar",
+                data: {
+                    labels: data.shipment_trend.map(d => d.Month),
+                    datasets: [{
+                        label: "출고량",
+                        data: data.shipment_trend.map(d => d.TotalShipment),
+                        backgroundColor: "#ffce56"
+                    }]
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
