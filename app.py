@@ -147,6 +147,67 @@ def dashboard():
 
     return render_template("index.html")  # ✅ GET 요청 시 기본 페이지 유지
 
+# 대시보드 
+from flask import jsonify
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    return render_template("dashboard.html")
+    """로그인 후 보이는 대시보드 데이터"""
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "DB 연결 실패!"})
+
+    try:
+        with conn:
+            # ✅ 최근 6개월 필터링
+            recent_months_query = """
+                SELECT DISTINCT TOP 6 Month FROM ShipmentStatus ORDER BY Month DESC
+            """
+            recent_months = pd.read_sql(recent_months_query, conn)['Month'].tolist()
+
+            # ✅ 1️⃣ 최근 6개월간 출고물량 비율 (DA, DS, KD, DC)
+            query_ratio = f"""
+                SELECT SiteCode, SUM(ShipmentQuantity) AS TotalQuantity
+                FROM ShipmentStatus
+                WHERE SiteCode LIKE '%(DA)' OR SiteCode LIKE '%(DS)'
+                      OR SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DC)'
+                GROUP BY SiteCode
+            """
+            df_ratio = pd.read_sql(query_ratio, conn)
+            site_ratio = df_ratio.to_dict("records")
+
+            # ✅ 2️⃣ M12085(120), M13085(120) 단가 추이 (최근 6개월)
+            query_price_trend = f"""
+                SELECT Month, AVG(CASE WHEN TGType IN ('M12085(120)', 'M13085(120)') THEN Price END) AS AvgPrice
+                FROM UnitPrice
+                WHERE Month IN ({','.join([f"'{m}'" for m in recent_months])})
+                GROUP BY Month
+                ORDER BY Month
+            """
+            df_price_trend = pd.read_sql(query_price_trend, conn)
+            price_trend = df_price_trend.to_dict("records")
+
+            # ✅ 3️⃣ 최근 6개월 출고량 변화 (월별 합계)
+            query_shipment_trend = f"""
+                SELECT Month, SUM(ShipmentQuantity) AS TotalShipment
+                FROM ShipmentStatus
+                WHERE Month IN ({','.join([f"'{m}'" for m in recent_months])})
+                GROUP BY Month
+                ORDER BY Month
+            """
+            df_shipment_trend = pd.read_sql(query_shipment_trend, conn)
+            shipment_trend = df_shipment_trend.to_dict("records")
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+    return jsonify({
+        "site_ratio": site_ratio,
+        "price_trend": price_trend,
+        "shipment_trend": shipment_trend
+    })
 
 # ✅ 결과 페이지
 @app.route("/result")
