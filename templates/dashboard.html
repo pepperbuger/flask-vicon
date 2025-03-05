@@ -33,63 +33,32 @@
     </div>
 
     <script>
-        // ✅ 대시보드 데이터 가져오기
         fetch('/dashboard_data')
         .then(response => response.json())
         .then(data => {
-            // 📌 1️⃣ 출고 비율 (DC, KD, DA, DS) 그룹화
-            const shipmentLabels = data.shipment_trend.map(d => d.Month);
-            const categories = ["DC", "KD", "DA", "DS"];
-            let shipmentData = { "DC": [], "KD": [], "DA": [], "DS": [] };
-
-            data.shipment_trend.forEach(d => {
-                let category = d.SiteCode.match(/\((DA|DS|KD|DC)\)$/);
-                if (category) {
-                    let key = category[1];  // (DC), (KD), (DA), (DS) 값 추출
-                    if (shipmentData[key]) {
-                        shipmentData[key].push(d.TotalShipment);
+            // ✅ 출고량 그래프 (DC, KD, DA, DS 그룹화)
+            const ctx1 = document.getElementById("shipmentTrendChart").getContext("2d");
+            new Chart(ctx1, {
+                type: "line",
+                data: {
+                    labels: [...new Set(data.shipment_trend.map(d => d.Month))],
+                    datasets: [
+                        { label: "DC", data: data.shipment_trend.filter(d => d.Category === "DC").map(d => d.TotalShipment), borderColor: "red", fill: false },
+                        { label: "KD", data: data.shipment_trend.filter(d => d.Category === "KD").map(d => d.TotalShipment), borderColor: "blue", fill: false },
+                        { label: "DA", data: data.shipment_trend.filter(d => d.Category === "DA").map(d => d.TotalShipment), borderColor: "green", fill: false },
+                        { label: "DS", data: data.shipment_trend.filter(d => d.Category === "DS").map(d => d.TotalShipment), borderColor: "orange", fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: "최근 6개월 출고량 변화 (DC, KD, DA, DS)" }
                     }
                 }
             });
-
-            const shipmentDatasets = categories.map(c => ({
-                label: c,
-                data: shipmentData[c] || [],
-                borderColor: getRandomColor(),
-                fill: false
-            }));
-
-            // 📌 2️⃣ 출고량 차트
-            new Chart(document.getElementById("shipmentTrendChart"), {
-                type: "line",
-                data: {
-                    labels: shipmentLabels,
-                    datasets: shipmentDatasets
-                }
-            });
-
-            // 📌 3️⃣ 단가 추이 차트
-            new Chart(document.getElementById("priceTrendChart"), {
-                type: "line",
-                data: {
-                    labels: data.price_trend.map(d => d.Month),
-                    datasets: [{
-                        label: "평균 단가",
-                        data: data.price_trend.map(d => d.AvgPrice),
-                        borderColor: "#42a5f5",
-                        fill: false
-                    }]
-                }
-            });
-
         });
-
-        // ✅ 랜덤 색상 함수 (디자인 개선)
-        function getRandomColor() {
-            const colors = ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff"];
-            return colors[Math.floor(Math.random() * colors.length)];
-        }
-    </script>
-
+        </script>
+        
 </body>
 </html>

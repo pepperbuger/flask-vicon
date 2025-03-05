@@ -109,6 +109,20 @@ users = load_users_from_env()
 def home():
     return redirect(url_for("dashboard"))
 
+# 조회기능
+@app.route("/search", methods=["POST"])
+@login_required
+def search():
+    site_code = request.json.get("site_code", "").strip()
+    if not site_code:
+        return jsonify({"error": "현장코드를 입력하세요."})
+
+    data = query_database(site_code)
+    if "error" in data:
+        return jsonify({"error": data["error"]})
+
+    return jsonify(data)
+
 # ✅ 로그인 & 로그아웃
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -127,11 +141,21 @@ def logout():
     logout_user()
     return redirect(url_for("login"))
 
-# ✅ 대시보드 페이지 (HTML 렌더링)
-@app.route("/dashboard")
+# ✅ 대시보드 페이지 
+@app.route("/dashboard", methods=["GET", "POST"])
 @login_required
 def dashboard():
-    return render_template("dashboard.html")  # 🟢 로그인 후 대시보드 페이지 보여줌
+    if request.method == "POST":
+        site_code = request.form.get("site_code")
+        if not site_code:
+            return render_template("index.html", error="❌ 현장코드를 입력하세요.")
+
+        site_code = site_code.strip()
+        data = query_database(site_code)
+        return render_template("index.html", data=data)
+
+    return render_template("index.html")
+
 
 # ✅ 대시보드 데이터 API (차트용 데이터 제공)
 @app.route("/dashboard_data")
