@@ -21,18 +21,9 @@
     <h1>📊 대시보드</h1>
 
     <!-- ✅ 출고 비율 라인 차트 -->
-    <div class="mb-4">
-        <h3>📦 최근 6개월 출고물량 (DC, KD, DA, DS)</h3>
-        <canvas id="shipmentTrendChart"></canvas>
-    </div>
-
-    <!-- ✅ 단가 추이 라인 차트 -->
-    <div class="mb-4">
-        <h3>💰 M12085(120), M13085(120) 단가 추이</h3>
-        <canvas id="priceTrendChart"></canvas>
-    </div>
     <canvas id="shipmentChart"></canvas>
-
+    <canvas id="categoryPercentageChart"></canvas>
+    
     <script>
     fetch('/dashboard_data')
         .then(response => response.json())
@@ -42,50 +33,71 @@
                 return;
             }
     
-            // ✅ 데이터 가공
             const months = Object.keys(data.shipment_trend).sort();
             const totalShipments = months.map(month => data.shipment_trend[month].TotalShipment);
-            const categoryData = {};
+            const categoryData = { "DA": [], "DS": [], "DC": [], "KD": [], "D": [] };
             const categoryColors = {
-                "DC": "rgba(255, 99, 132, 0.8)",
-                "KD": "rgba(54, 162, 235, 0.8)",
-                "DA": "rgba(255, 206, 86, 0.8)",
-                "DS": "rgba(75, 192, 192, 0.8)",
+                "DA": "rgba(255, 99, 132, 0.8)",
+                "DS": "rgba(54, 162, 235, 0.8)",
+                "DC": "rgba(255, 206, 86, 0.8)",
+                "KD": "rgba(75, 192, 192, 0.8)",
                 "D": "rgba(153, 102, 255, 0.8)"
             };
     
             months.forEach(month => {
-                data.shipment_trend[month].Categories.forEach(category => {
-                    if (!categoryData[category.Category]) {
-                        categoryData[category.Category] = [];
-                    }
-                    categoryData[category.Category].push(category.Shipment);
+                Object.keys(categoryData).forEach(category => {
+                    const dataForMonth = data.shipment_trend[month].CategoryBreakdown[category] || { Percentage: 0 };
+                    categoryData[category].push(dataForMonth.Percentage);
                 });
             });
     
-            const datasets = Object.keys(categoryData).map(category => ({
-                label: category,
-                data: categoryData[category] || [],
-                backgroundColor: categoryColors[category] || "rgba(100, 100, 100, 0.8)"
-            }));
-    
+            // ✅ 출고량 막대 + 꺾은선 차트
             new Chart(document.getElementById("shipmentChart"), {
                 type: "bar",
                 data: {
                     labels: months,
-                    datasets: datasets
+                    datasets: [
+                        {
+                            label: "출고량",
+                            type: "bar",
+                            data: totalShipments,
+                            backgroundColor: "rgba(0, 123, 255, 0.8)"
+                        },
+                        {
+                            label: "출고량 변화",
+                            type: "line",
+                            data: totalShipments,
+                            borderColor: "rgba(255, 0, 0, 0.8)",
+                            fill: false
+                        }
+                    ]
+                },
+                options: { responsive: true, plugins: { legend: { position: "top" } } }
+            });
+    
+            // ✅ 카테고리별 비율 100% 스택형 차트
+            new Chart(document.getElementById("categoryPercentageChart"), {
+                type: "bar",
+                data: {
+                    labels: months,
+                    datasets: Object.keys(categoryData).map(category => ({
+                        label: category,
+                        data: categoryData[category],
+                        backgroundColor: categoryColors[category]
+                    }))
                 },
                 options: {
                     responsive: true,
                     plugins: { legend: { position: "top" } },
                     scales: {
                         x: { stacked: true },
-                        y: { stacked: true }
+                        y: { stacked: true, max: 100 }
                     }
                 }
             });
         });
     </script>
+    
     
 </body>
 </html>

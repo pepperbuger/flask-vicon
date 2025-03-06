@@ -194,24 +194,37 @@ def dashboard_data():
                         Month, 
                         SUM(ShipmentQuantity) AS TotalShipment
                     FROM ShipmentStatus
-                    WHERE Month IN (SELECT DISTINCT TOP 6 Month FROM ShipmentStatus ORDER BY Month DESC)
+                    WHERE Month >= FORMAT(DATEADD(MONTH, -11, GETDATE()), 'yyyy-MM')
                     GROUP BY Month
                 ),
                 CategoryShipment AS (
                     SELECT 
                         Month, 
-                        SiteCode, 
+                        CASE 
+                            WHEN SiteCode LIKE '%(DA)' THEN 'DA'
+                            WHEN SiteCode LIKE '%(DS)' THEN 'DS'
+                            WHEN SiteCode LIKE '%(DC)' THEN 'DC'
+                            WHEN SiteCode LIKE '%(KD)' THEN 'KD'
+                            ELSE 'D'
+                        END AS Category,
                         SUM(ShipmentQuantity) AS CategoryShipment
                     FROM ShipmentStatus
-                    WHERE Month IN (SELECT DISTINCT TOP 6 Month FROM ShipmentStatus ORDER BY Month DESC)
-                    GROUP BY Month, SiteCode
+                    WHERE Month >= FORMAT(DATEADD(MONTH, -11, GETDATE()), 'yyyy-MM')
+                    GROUP BY Month, 
+                        CASE 
+                            WHEN SiteCode LIKE '%(DA)' THEN 'DA'
+                            WHEN SiteCode LIKE '%(DS)' THEN 'DS'
+                            WHEN SiteCode LIKE '%(DC)' THEN 'DC'
+                            WHEN SiteCode LIKE '%(KD)' THEN 'KD'
+                            ELSE 'D'
+                        END
                 )
                 SELECT 
                     c.Month, 
-                    c.SiteCode AS Category, 
+                    c.Category, 
                     c.CategoryShipment, 
                     m.TotalShipment, 
-                    (c.CategoryShipment * 100.0 / m.TotalShipment) AS Percentage
+                    (c.CategoryShipment * 100.0 / NULLIF(m.TotalShipment, 0)) AS Percentage
                 FROM CategoryShipment c
                 JOIN MonthlyShipment m ON c.Month = m.Month
                 ORDER BY c.Month DESC, c.CategoryShipment DESC;
@@ -219,7 +232,7 @@ def dashboard_data():
 
             df = pd.read_sql(query, conn)
 
-            # ✅ 데이터 가공: 월별 전체 출고량과 각 카테고리 비율을 정리
+            # ✅ 데이터를 프론트엔드에서 쉽게 사용할 수 있도록 가공
             grouped_data = {}
             for _, row in df.iterrows():
                 month = row["Month"]
@@ -231,21 +244,18 @@ def dashboard_data():
                 if month not in grouped_data:
                     grouped_data[month] = {
                         "TotalShipment": total_shipment,
-                        "Categories": []
+                        "CategoryBreakdown": {}
                     }
 
-                grouped_data[month]["Categories"].append({
-                    "Category": category,
+                grouped_data[month]["CategoryBreakdown"][category] = {
                     "Shipment": category_shipment,
                     "Percentage": round(percentage, 2)
-                })
+                }
 
             return jsonify({"shipment_trend": grouped_data})
 
     except Exception as e:
         return jsonify({"error": f"쿼리 실행 오류: {str(e)}"})
-
-
 
 # ✅ 조회 결과 페이지
 @app.route("/result")
