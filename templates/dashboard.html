@@ -24,6 +24,12 @@
     <canvas id="shipmentChart"></canvas>
     <canvas id="categoryPercentageChart"></canvas>
     
+    <h3>출고량 추이</h3>
+    <canvas id="shipmentChart" style="max-width: 560px; height: 220px;"></canvas>
+    
+    <h3>출고 유형별 비율</h3>
+    <canvas id="categoryPercentageChart" style="max-width: 500px; height: 200px;"></canvas>
+    
     <script>
     fetch('/dashboard_data')
         .then(response => response.json())
@@ -35,23 +41,40 @@
     
             const months = Object.keys(data.shipment_trend).sort();
             const totalShipments = months.map(month => data.shipment_trend[month].TotalShipment);
-            const categoryData = { "DA": [], "DS": [], "DC": [], "KD": [], "D": [] };
+    
+            // ✅ 출고 유형명을 변환하는 매핑 적용
+            const categoryMapping = {
+                "DA": "대리점, 유통",
+                "DS": "납품",
+                "KD": "조달청",
+                "DP": "조달청",
+                "DC": "공사",
+                "D": "공사"
+            };
+    
+            // ✅ 올바른 카테고리명으로 변환하여 저장
+            const categoryData = { "대리점, 유통": [], "납품": [], "조달청": [], "공사": [] };
             const categoryColors = {
-                "DA": "rgba(255, 99, 132, 0.8)",
-                "DS": "rgba(54, 162, 235, 0.8)",
-                "DC": "rgba(255, 206, 86, 0.8)",
-                "KD": "rgba(75, 192, 192, 0.8)",
-                "D": "rgba(153, 102, 255, 0.8)"
+                "대리점, 유통": "rgba(255, 99, 132, 0.8)",
+                "납품": "rgba(54, 162, 235, 0.8)",
+                "조달청": "rgba(255, 206, 86, 0.8)",
+                "공사": "rgba(75, 192, 192, 0.8)"
             };
     
             months.forEach(month => {
                 Object.keys(categoryData).forEach(category => {
-                    const dataForMonth = data.shipment_trend[month].CategoryBreakdown[category] || { Percentage: 0 };
-                    categoryData[category].push(dataForMonth.Percentage);
+                    let percentage = 0;
+                    for (const key in data.shipment_trend[month].CategoryBreakdown) {
+                        const mappedCategory = categoryMapping[key] || key; // 매핑 적용
+                        if (mappedCategory === category) {
+                            percentage += data.shipment_trend[month].CategoryBreakdown[key].Percentage;
+                        }
+                    }
+                    categoryData[category].push(percentage);
                 });
             });
     
-            // ✅ 출고량 막대 + 꺾은선 차트
+            // ✅ 출고량 추이 차트
             new Chart(document.getElementById("shipmentChart"), {
                 type: "bar",
                 data: {
@@ -72,10 +95,19 @@
                         }
                     ]
                 },
-                options: { responsive: true, plugins: { legend: { position: "top" } } }
+                options: { 
+                    responsive: true, 
+                    plugins: { 
+                        legend: { position: "top" },
+                        title: {
+                            display: true,
+                            text: "출고량 추이"
+                        }
+                    } 
+                }
             });
     
-            // ✅ 카테고리별 비율 100% 스택형 차트
+            // ✅ 출고 유형별 비율 차트 (100% 스택형)
             new Chart(document.getElementById("categoryPercentageChart"), {
                 type: "bar",
                 data: {
@@ -88,7 +120,13 @@
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { position: "top" } },
+                    plugins: { 
+                        legend: { position: "top" },
+                        title: {
+                            display: true,
+                            text: "출고 유형별 비율"
+                        }
+                    },
                     scales: {
                         x: { stacked: true },
                         y: { stacked: true, max: 100 }
@@ -97,7 +135,6 @@
             });
         });
     </script>
-    
     
 </body>
 </html>
