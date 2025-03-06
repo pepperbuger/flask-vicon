@@ -30,6 +30,10 @@ def get_db_connection():
         print(f"❌ Database connection failed: {e}")
         return None
 
+# ✅ Flask 실행
+if __name__ == "__main__":
+    app.run(debug=True)
+
 # ✅ 로그인 설정
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -242,6 +246,3 @@ def download_excel():
     return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                      as_attachment=True, download_name="현장_조회결과.xlsx")
 
-# ✅ Flask 실행
-if __name__ == "__main__":
-    app.run(debug=True)
