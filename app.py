@@ -29,7 +29,7 @@ def check_db():
             return "❌ DB 연결 실패: 연결이 None입니다."
     except Exception as e:
         return f"❌ DB 연결 오류: {e}"
-        
+
 @app.route("/test-db-connection")
 def test_db_connection():
     import pyodbc
@@ -188,35 +188,63 @@ def dashboard_data():
 
     try:
         with conn:
-            recent_months_query = """
-                SELECT DISTINCT TOP 6 Month FROM ShipmentStatus ORDER BY Month DESC
+            query = """
+                WITH MonthlyShipment AS (
+                    SELECT 
+                        Month, 
+                        SUM(ShipmentQuantity) AS TotalShipment
+                    FROM ShipmentStatus
+                    WHERE Month IN (SELECT DISTINCT TOP 6 Month FROM ShipmentStatus ORDER BY Month DESC)
+                    GROUP BY Month
+                ),
+                CategoryShipment AS (
+                    SELECT 
+                        Month, 
+                        SiteCode, 
+                        SUM(ShipmentQuantity) AS CategoryShipment
+                    FROM ShipmentStatus
+                    WHERE Month IN (SELECT DISTINCT TOP 6 Month FROM ShipmentStatus ORDER BY Month DESC)
+                    GROUP BY Month, SiteCode
+                )
+                SELECT 
+                    c.Month, 
+                    c.SiteCode AS Category, 
+                    c.CategoryShipment, 
+                    m.TotalShipment, 
+                    (c.CategoryShipment * 100.0 / m.TotalShipment) AS Percentage
+                FROM CategoryShipment c
+                JOIN MonthlyShipment m ON c.Month = m.Month
+                ORDER BY c.Month DESC, c.CategoryShipment DESC;
             """
-            recent_months = pd.read_sql(recent_months_query, conn)['Month'].tolist()
 
-            query_shipment_trend = """
-                SELECT SiteCode, Month, SUM(ShipmentQuantity) AS TotalShipment
-                FROM ShipmentStatus
-                WHERE Month IN ({})
-                GROUP BY SiteCode, Month
-                ORDER BY Month
-            """.format(",".join([f"'{m}'" for m in recent_months]))
+            df = pd.read_sql(query, conn)
 
-            df_shipment_trend = pd.read_sql(query_shipment_trend, conn)
+            # ✅ 데이터 가공: 월별 전체 출고량과 각 카테고리 비율을 정리
+            grouped_data = {}
+            for _, row in df.iterrows():
+                month = row["Month"]
+                category = row["Category"]
+                total_shipment = row["TotalShipment"]
+                category_shipment = row["CategoryShipment"]
+                percentage = row["Percentage"]
 
-            # ✅ NaN 값 처리
-            df_shipment_trend['Category'] = df_shipment_trend['SiteCode'].str.extract(r"\((DA|DS|KD|DC)\)$")
-            df_shipment_trend['Category'] = df_shipment_trend['Category'].fillna("기타")  # NaN 처리
+                if month not in grouped_data:
+                    grouped_data[month] = {
+                        "TotalShipment": total_shipment,
+                        "Categories": []
+                    }
 
-            # ✅ 월별 데이터 그룹화
-            shipment_trend = df_shipment_trend.groupby(["Month", "Category"])["TotalShipment"].sum().reset_index().to_dict("records")
+                grouped_data[month]["Categories"].append({
+                    "Category": category,
+                    "Shipment": category_shipment,
+                    "Percentage": round(percentage, 2)
+                })
 
-            if not shipment_trend:
-                return jsonify({"error": "출고 데이터 없음"})  # ✅ 데이터 없을 경우 처리
+            return jsonify({"shipment_trend": grouped_data})
 
     except Exception as e:
-        return jsonify({"error": f"쿼리 실행 오류: {str(e)}"})  # ✅ 오류 처리
+        return jsonify({"error": f"쿼리 실행 오류: {str(e)}"})
 
-    return jsonify({"shipment_trend": shipment_trend})
 
 
 # ✅ 조회 결과 페이지

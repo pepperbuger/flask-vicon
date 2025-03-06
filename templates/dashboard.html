@@ -31,70 +31,61 @@
         <h3>💰 M12085(120), M13085(120) 단가 추이</h3>
         <canvas id="priceTrendChart"></canvas>
     </div>
+    <canvas id="shipmentChart"></canvas>
 
     <script>
-        fetch('/dashboard_data')
+    fetch('/dashboard_data')
         .then(response => response.json())
         .then(data => {
-            console.log("📊 대시보드 데이터:", data);  // ✅ 디버깅 로그 추가
+            if (data.error) {
+                console.error(data.error);
+                return;
+            }
     
-            // ✅ 월별 출고량 표 채우기
-            let shipmentTableBody = document.getElementById("shipmentTableBody");
-            shipmentTableBody.innerHTML = "";
+            // ✅ 데이터 가공
+            const months = Object.keys(data.shipment_trend).sort();
+            const totalShipments = months.map(month => data.shipment_trend[month].TotalShipment);
+            const categoryData = {};
+            const categoryColors = {
+                "DC": "rgba(255, 99, 132, 0.8)",
+                "KD": "rgba(54, 162, 235, 0.8)",
+                "DA": "rgba(255, 206, 86, 0.8)",
+                "DS": "rgba(75, 192, 192, 0.8)",
+                "D": "rgba(153, 102, 255, 0.8)"
+            };
     
-            data.total_shipment.forEach(row => {
-                let month = row.Month;
-                let total = row.TotalShipment;
-    
-                let da_ratio = data.shipment_ratio.find(d => d.Month === month && d.Category === "DA")?.Quantity || 0;
-                let dc_ratio = data.shipment_ratio.find(d => d.Month === month && d.Category === "DC")?.Quantity || 0;
-                let ds_ratio = data.shipment_ratio.find(d => d.Month === month && d.Category === "DS")?.Quantity || 0;
-                let kd_ratio = data.shipment_ratio.find(d => d.Month === month && d.Category === "KD")?.Quantity || 0;
-    
-                shipmentTableBody.innerHTML += `
-                    <tr>
-                        <td>${month}</td>
-                        <td>${total.toLocaleString()}</td>
-                        <td>${((da_ratio / total) * 100).toFixed(1)}%</td>
-                        <td>${((dc_ratio / total) * 100).toFixed(1)}%</td>
-                        <td>${((ds_ratio / total) * 100).toFixed(1)}%</td>
-                        <td>${((kd_ratio / total) * 100).toFixed(1)}%</td>
-                    </tr>
-                `;
+            months.forEach(month => {
+                data.shipment_trend[month].Categories.forEach(category => {
+                    if (!categoryData[category.Category]) {
+                        categoryData[category.Category] = [];
+                    }
+                    categoryData[category.Category].push(category.Shipment);
+                });
             });
     
-            // ✅ 📈 출고량 차트
-            const ctx1 = document.getElementById("shipmentTrendChart").getContext("2d");
-            new Chart(ctx1, {
-                type: "line",
+            const datasets = Object.keys(categoryData).map(category => ({
+                label: category,
+                data: categoryData[category] || [],
+                backgroundColor: categoryColors[category] || "rgba(100, 100, 100, 0.8)"
+            }));
+    
+            new Chart(document.getElementById("shipmentChart"), {
+                type: "bar",
                 data: {
-                    labels: data.total_shipment.map(d => d.Month),
-                    datasets: [{
-                        label: "출고량",
-                        data: data.total_shipment.map(d => d.TotalShipment),
-                        borderColor: "#42a5f5",
-                        fill: false
-                    }]
+                    labels: months,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: "top" } },
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true }
+                    }
                 }
             });
-    
-            // ✅ 📈 단가 추이 차트
-            const ctx2 = document.getElementById("priceTrendChart").getContext("2d");
-            new Chart(ctx2, {
-                type: "line",
-                data: {
-                    labels: data.price_trend.map(d => d.Month),
-                    datasets: [{
-                        label: "단가 평균",
-                        data: data.price_trend.map(d => d.AvgPrice),
-                        borderColor: "green",
-                        fill: false
-                    }]
-                }
-            });
-        })
-        .catch(error => console.error("❌ 대시보드 데이터 불러오기 실패:", error));
+        });
     </script>
-     
+    
 </body>
 </html>
