@@ -123,6 +123,7 @@ def search():
 
     return jsonify(data)
 
+
 # ✅ 로그인 & 로그아웃
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -173,7 +174,7 @@ def dashboard_data():
             """
             recent_months = pd.read_sql(recent_months_query, conn)['Month'].tolist()
 
-            # ✅ 1️⃣ 최근 6개월간 출고물량 비율 (DC, KD, DA, DS)
+            # ✅ 출고량 (DC, KD, DA, DS 그룹화)
             query_shipment_trend = """
                 SELECT SiteCode, Month, SUM(ShipmentQuantity) AS TotalShipment
                 FROM ShipmentStatus
@@ -183,33 +184,13 @@ def dashboard_data():
             """.format(",".join([f"'{m}'" for m in recent_months]))
             
             df_shipment_trend = pd.read_sql(query_shipment_trend, conn)
-
-            # ✅ SiteCode에서 (DC), (KD), (DA), (DS) 추출
             df_shipment_trend['Category'] = df_shipment_trend['SiteCode'].str.extract(r"\((DA|DS|KD|DC)\)$")
-
-            # ✅ 월별 합계 계산
-            shipment_grouped = df_shipment_trend.groupby(["Month", "Category"])["TotalShipment"].sum().reset_index()
-            shipment_trend = shipment_grouped.to_dict("records")
-
-            # ✅ 2️⃣ M12085(120), M13085(120) 단가 추이
-            query_price_trend = """
-                SELECT Month, AVG(CASE WHEN TGType IN ('M12085(120)', 'M13085(120)') THEN Price END) AS AvgPrice
-                FROM UnitPrice
-                WHERE Month IN ({})
-                GROUP BY Month
-                ORDER BY Month
-            """.format(",".join([f"'{m}'" for m in recent_months]))
-
-            df_price_trend = pd.read_sql(query_price_trend, conn)
-            price_trend = df_price_trend.to_dict("records")
+            shipment_trend = df_shipment_trend.groupby(["Month", "Category"])["TotalShipment"].sum().reset_index().to_dict("records")
 
     except Exception as e:
         return jsonify({"error": str(e)})
 
-    return jsonify({
-        "shipment_trend": shipment_trend,
-        "price_trend": price_trend
-    })
+    return jsonify({"shipment_trend": shipment_trend})
 
 
 # ✅ 결과 페이지
