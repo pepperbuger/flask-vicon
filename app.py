@@ -109,25 +109,6 @@ users = load_users_from_env()
 def home():
     return redirect(url_for("dashboard"))
 
-# 조회기능
-@app.route("/search", methods=["POST"])
-@login_required
-def search():
-    data = request.get_json()
-    if not data or "site_code" not in data:
-        return jsonify({"error": "현장코드를 입력하세요."}), 400  # 🚨 JSON 데이터 누락 방지
-
-    site_code = data["site_code"].strip()
-    print(f"🔍 검색 요청된 현장코드: {site_code}")  # ✅ 값 확인용 디버깅 로그
-
-    result_data = query_database(site_code)
-    if "error" in result_data:
-        return jsonify({"error": result_data["error"]}), 404  # 🚨 데이터 없을 경우 404 반환
-
-    return jsonify(result_data or {})  # ✅ 빈 값 방지하여 JSON 반환
-
-
-
 
 # ✅ 로그인 & 로그아웃
 @app.route("/login", methods=["GET", "POST"])
@@ -147,6 +128,38 @@ def logout():
     logout_user()
     return redirect(url_for("login"))
 
+ # 조회기능
+
+@app.route("/search", methods=["POST"])
+@login_required
+def search():
+    site_code = request.json.get("site_code", "").strip()
+    if not site_code:
+        return jsonify({"error": "현장코드를 입력하세요."})
+
+    data = query_database(site_code)
+
+    if "error" in data:
+        return jsonify({"error": data["error"]})
+
+    # ✅ int64 → int 변환 (NumPy int64 타입을 일반 int로 변환)
+    for key in data:
+        if isinstance(data[key], list):  # 데이터가 리스트인 경우만 변환
+            for row in data[key]:
+                for k, v in row.items():
+                    if isinstance(v, np.int64):
+                        row[k] = int(v)
+
+    return jsonify(data)  # ✅ JSON 응답 반환
+
+# store_data
+@app.route("/store_data", methods=["POST"])
+@login_required
+def store_data():
+    session["data"] = request.get_json()  # ✅ 세션에 데이터 저장
+    return jsonify({"success": True})
+
+
 # ✅ 대시보드 페이지 
 @app.route("/dashboard", methods=["GET", "POST"])
 @login_required
@@ -161,13 +174,6 @@ def dashboard():
         return render_template("index.html", data=data)
 
     return render_template("index.html")
-
-# store_data
-@app.route("/store_data", methods=["POST"])
-@login_required
-def store_data():
-    session["data"] = request.get_json()  # ✅ 세션에 데이터 저장
-    return jsonify({"success": True})
 
 
 # ✅ 대시보드 데이터 API (차트용 데이터 제공)
@@ -221,45 +227,6 @@ def result():
     return render_template("result.html", data=data)
 
 # ✅ 데이터 조회 함수
-def query_database(site_code):
-    conn = get_db_connection()
-    if conn is None:
-        return {"error": "DB 연결 실패!"}
-
-    try:
-        with conn:
-            print(f"🔍 DB에서 조회 중: SiteCode='{site_code}'")  # ✅ 로그 출력
-
-            # ✅ 요약 정보 조회
-            query_summary = f"""
-                SELECT SiteCode, SiteName, Quantity, ContractAmount 
-                FROM dbo.SiteInfo 
-                WHERE SiteCode = N'{site_code}'
-            """
-            df_summary = pd.read_sql(query_summary, conn)
-
-            if df_summary.empty:
-                return {"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}
-
-            return {
-                "summary": df_summary.to_dict("records") if not df_summary.empty else []
-            }
-    except Exception as e:
-        return {"error": f"쿼리 실행 오류: {str(e)}"}  # ✅ 오류 메시지 반환
-
-
-# ✅ 500 Internal Server Error 핸들링
-@app.errorhandler(500)
-def internal_server_error(e):
-    return jsonify({"error": str(e)}), 500
-
-# ✅ Flask 실행 (로컬 실행 시 필요)
-if __name__ == "__main__":
-    app.run(debug=True)
-
-
-# 웹브라우저에 디버그 표시
-app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "false").lower() == "true"    
 
 def query_database(site_code):
     """현장코드별 데이터 조회"""
@@ -453,3 +420,16 @@ def internal_server_error(e):
     error_message = traceback.format_exc()  # 전체 오류 스택 추적
     print(f"❌ Internal Server Error: {error_message}")  # 콘솔에도 출력
     return jsonify({"error": str(e), "traceback": error_message}), 500 
+
+# ✅ 500 Internal Server Error 핸들링
+@app.errorhandler(500)
+def internal_server_error(e):
+    return jsonify({"error": str(e)}), 500
+
+# ✅ Flask 실행 (로컬 실행 시 필요)
+if __name__ == "__main__":
+    app.run(debug=True)
+
+
+# 웹브라우저에 디버그 표시
+app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "false").lower() == "true"    
