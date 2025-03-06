@@ -10,6 +10,10 @@ import io
 # ✅ 환경 변수 로드
 load_dotenv()
 
+# ✅ Flask 실행
+if __name__ == "__main__":
+    app.run(debug=True)
+
 # ✅ MSSQL 연결 설정
 DBHOST = "your_db_host"
 DBNAME = "your_db_name"
@@ -30,9 +34,6 @@ def get_db_connection():
         print(f"❌ Database connection failed: {e}")
         return None
 
-# ✅ Flask 실행
-if __name__ == "__main__":
-    app.run(debug=True)
 
 # ✅ 로그인 설정
 login_manager = LoginManager()

@@ -36,7 +36,9 @@
         fetch('/dashboard_data')
         .then(response => response.json())
         .then(data => {
-            // ✅ 📋 월별 출고량 표 채우기
+            console.log("📊 대시보드 데이터:", data);  // ✅ 디버깅 로그 추가
+    
+            // ✅ 월별 출고량 표 채우기
             let shipmentTableBody = document.getElementById("shipmentTableBody");
             shipmentTableBody.innerHTML = "";
     
@@ -90,9 +92,9 @@
                     }]
                 }
             });
-        });
+        })
+        .catch(error => console.error("❌ 대시보드 데이터 불러오기 실패:", error));
     </script>
-    
-        
+     
 </body>
 </html>
