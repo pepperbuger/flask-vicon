@@ -37,7 +37,7 @@
         document.getElementById("searchForm").addEventListener("submit", function(event) {
             event.preventDefault();
             let siteCode = document.getElementById("site_code").value;
-
+        
             fetch("/search", {
                 method: "POST",
                 body: JSON.stringify({ site_code: siteCode }),
@@ -49,15 +49,14 @@
                     alert("❌ " + data.error);
                     return;
                 }
-
-                let resultDiv = document.getElementById("resultContainer");
-                resultDiv.innerHTML = `
-                    <h3>📋 조회 결과</h3>
-                    <p><strong>현장코드:</strong> ${data.summary[0].SiteCode}</p>
-                    <p><strong>현장명:</strong> ${data.summary[0].SiteName}</p>
-                    <p><strong>계약물량:</strong> ${data.summary[0].Quantity.toLocaleString()} ㎡</p>
-                    <p><strong>계약금액:</strong> ${data.summary[0].ContractAmount.toLocaleString()} 원</p>
-                `;
+                
+                // ✅ 세션에 데이터 저장 후 result 페이지로 이동
+                fetch("/store_data", {
+                    method: "POST",
+                    body: JSON.stringify(data),
+                    headers: { "Content-Type": "application/json" }
+                })
+                .then(() => window.location.href = "/result"); // ✅ 페이지 이동
             });
         });
 

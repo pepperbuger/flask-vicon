@@ -113,15 +113,19 @@ def home():
 @app.route("/search", methods=["POST"])
 @login_required
 def search():
-    site_code = request.json.get("site_code", "").strip()
-    if not site_code:
-        return jsonify({"error": "현장코드를 입력하세요."})
+    data = request.get_json()
+    if not data or "site_code" not in data:
+        return jsonify({"error": "현장코드를 입력하세요."}), 400  # 🚨 잘못된 요청 방지
 
-    data = query_database(site_code)
-    if "error" in data:
-        return jsonify({"error": data["error"]})
+    site_code = data["site_code"].strip()
+    print(f"🔍 검색 요청된 현장코드: {site_code}")  # ✅ 값 확인
 
-    return jsonify(data)
+    result_data = query_database(site_code)
+    if "error" in result_data:
+        return jsonify({"error": result_data["error"]}), 404  # 🚨 데이터 없을 경우 404 반환
+
+    return jsonify(result_data)  # ✅ 정상적으로 JSON 응답 반환
+
 
 
 # ✅ 로그인 & 로그아웃
@@ -157,6 +161,13 @@ def dashboard():
 
     return render_template("index.html")
 
+# store_data
+@app.route("/store_data", methods=["POST"])
+@login_required
+def store_data():
+    session["data"] = request.get_json()  # ✅ 세션에 데이터 저장
+    return jsonify({"success": True})
+
 
 # ✅ 대시보드 데이터 API (차트용 데이터 제공)
 @app.route("/dashboard_data")
@@ -168,13 +179,11 @@ def dashboard_data():
 
     try:
         with conn:
-            # ✅ 최근 6개월 조회
             recent_months_query = """
                 SELECT DISTINCT TOP 6 Month FROM ShipmentStatus ORDER BY Month DESC
             """
             recent_months = pd.read_sql(recent_months_query, conn)['Month'].tolist()
 
-            # ✅ 출고량 (DC, KD, DA, DS 그룹화)
             query_shipment_trend = """
                 SELECT SiteCode, Month, SUM(ShipmentQuantity) AS TotalShipment
                 FROM ShipmentStatus
@@ -182,13 +191,21 @@ def dashboard_data():
                 GROUP BY SiteCode, Month
                 ORDER BY Month
             """.format(",".join([f"'{m}'" for m in recent_months]))
-            
+
             df_shipment_trend = pd.read_sql(query_shipment_trend, conn)
+
+            # ✅ NaN 값 처리
             df_shipment_trend['Category'] = df_shipment_trend['SiteCode'].str.extract(r"\((DA|DS|KD|DC)\)$")
+            df_shipment_trend['Category'] = df_shipment_trend['Category'].fillna("기타")  # NaN 처리
+
+            # ✅ 월별 데이터 그룹화
             shipment_trend = df_shipment_trend.groupby(["Month", "Category"])["TotalShipment"].sum().reset_index().to_dict("records")
 
+            if not shipment_trend:
+                return jsonify({"error": "출고 데이터 없음"})  # ✅ 데이터 없을 경우 처리
+
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": f"쿼리 실행 오류: {str(e)}"})  # ✅ 오류 처리
 
     return jsonify({"shipment_trend": shipment_trend})
 
@@ -216,14 +233,16 @@ def query_database(site_code):
                 WHERE SiteCode = N'{site_code}'
             """
             df_summary = pd.read_sql(query_summary, conn)
-
+            
             if df_summary.empty:
-                return {"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}
+                return {"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}  # ✅ 데이터 없을 때 메시지 추가
 
             return {
-                "summary": df_summary.to_dict("records")
+                "summary": df_summary.to_dict("records") if not df_summary.empty else []
             }
     except Exception as e:
+        return {"error": f"쿼리 실행 오류: {str(e)}"}  # ✅ 오류 발생 시 상세 메시지 추가
+
         return {"error": str(e)}
 
 # ✅ 500 Internal Server Error 핸들링
