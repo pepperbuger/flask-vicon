@@ -36,29 +36,63 @@
         fetch('/dashboard_data')
         .then(response => response.json())
         .then(data => {
-            // ✅ 출고량 그래프 (DC, KD, DA, DS 그룹화)
+            // ✅ 📋 월별 출고량 표 채우기
+            let shipmentTableBody = document.getElementById("shipmentTableBody");
+            shipmentTableBody.innerHTML = "";
+    
+            data.total_shipment.forEach(row => {
+                let month = row.Month;
+                let total = row.TotalShipment;
+    
+                let da_ratio = data.shipment_ratio.find(d => d.Month === month && d.Category === "DA")?.Quantity || 0;
+                let dc_ratio = data.shipment_ratio.find(d => d.Month === month && d.Category === "DC")?.Quantity || 0;
+                let ds_ratio = data.shipment_ratio.find(d => d.Month === month && d.Category === "DS")?.Quantity || 0;
+                let kd_ratio = data.shipment_ratio.find(d => d.Month === month && d.Category === "KD")?.Quantity || 0;
+    
+                shipmentTableBody.innerHTML += `
+                    <tr>
+                        <td>${month}</td>
+                        <td>${total.toLocaleString()}</td>
+                        <td>${((da_ratio / total) * 100).toFixed(1)}%</td>
+                        <td>${((dc_ratio / total) * 100).toFixed(1)}%</td>
+                        <td>${((ds_ratio / total) * 100).toFixed(1)}%</td>
+                        <td>${((kd_ratio / total) * 100).toFixed(1)}%</td>
+                    </tr>
+                `;
+            });
+    
+            // ✅ 📈 출고량 차트
             const ctx1 = document.getElementById("shipmentTrendChart").getContext("2d");
             new Chart(ctx1, {
                 type: "line",
                 data: {
-                    labels: [...new Set(data.shipment_trend.map(d => d.Month))],
-                    datasets: [
-                        { label: "DC", data: data.shipment_trend.filter(d => d.Category === "DC").map(d => d.TotalShipment), borderColor: "red", fill: false },
-                        { label: "KD", data: data.shipment_trend.filter(d => d.Category === "KD").map(d => d.TotalShipment), borderColor: "blue", fill: false },
-                        { label: "DA", data: data.shipment_trend.filter(d => d.Category === "DA").map(d => d.TotalShipment), borderColor: "green", fill: false },
-                        { label: "DS", data: data.shipment_trend.filter(d => d.Category === "DS").map(d => d.TotalShipment), borderColor: "orange", fill: false }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { position: 'top' },
-                        title: { display: true, text: "최근 6개월 출고량 변화 (DC, KD, DA, DS)" }
-                    }
+                    labels: data.total_shipment.map(d => d.Month),
+                    datasets: [{
+                        label: "출고량",
+                        data: data.total_shipment.map(d => d.TotalShipment),
+                        borderColor: "#42a5f5",
+                        fill: false
+                    }]
+                }
+            });
+    
+            // ✅ 📈 단가 추이 차트
+            const ctx2 = document.getElementById("priceTrendChart").getContext("2d");
+            new Chart(ctx2, {
+                type: "line",
+                data: {
+                    labels: data.price_trend.map(d => d.Month),
+                    datasets: [{
+                        label: "단가 평균",
+                        data: data.price_trend.map(d => d.AvgPrice),
+                        borderColor: "green",
+                        fill: false
+                    }]
                 }
             });
         });
-        </script>
+    </script>
+    
         
 </body>
 </html>

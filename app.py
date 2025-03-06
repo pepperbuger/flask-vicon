@@ -106,6 +106,65 @@ def dashboard():
 
     return render_template("dashboard.html")
 
+@app.route("/dashboard_data")
+@login_required
+def dashboard_data():
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "DB 연결 실패!"})
+
+    try:
+        with conn:
+            # ✅ 1️⃣ 최근 6개월 조회
+            recent_months_query = """
+                SELECT DISTINCT TOP 6 Month FROM ShipmentStatus ORDER BY Month DESC
+            """
+            recent_months = pd.read_sql(recent_months_query, conn)['Month'].tolist()
+
+            # ✅ 2️⃣ 월별 출고량 조회
+            query_total_shipment = """
+                SELECT Month, SUM(ShipmentQuantity) AS TotalShipment
+                FROM ShipmentStatus
+                WHERE Month IN ({})
+                GROUP BY Month
+                ORDER BY Month
+            """.format(",".join([f"'{m}'" for m in recent_months]))
+            df_total_shipment = pd.read_sql(query_total_shipment, conn)
+
+            # ✅ 3️⃣ DA, DC, DS, KD 비율 조회
+            query_shipment_ratio = """
+                SELECT Month, SiteCode, SUM(ShipmentQuantity) AS Quantity
+                FROM ShipmentStatus
+                WHERE Month IN ({})
+                GROUP BY Month, SiteCode
+                ORDER BY Month
+            """.format(",".join([f"'{m}'" for m in recent_months]))
+            df_shipment_ratio = pd.read_sql(query_shipment_ratio, conn)
+
+            # ✅ SiteCode에서 (DA), (DC), (DS), (KD) 추출하여 그룹화
+            df_shipment_ratio['Category'] = df_shipment_ratio['SiteCode'].str.extract(r"\((DA|DS|KD|DC)\)$")
+            df_shipment_ratio = df_shipment_ratio.groupby(["Month", "Category"])["Quantity"].sum().reset_index()
+
+            # ✅ 4️⃣ 최근 6개월 단가 추이 조회
+            query_price_trend = """
+                SELECT Month, AVG(CASE WHEN TGType IN ('M12085(120)', 'M13085(120)') THEN Price END) AS AvgPrice
+                FROM UnitPrice
+                WHERE Month IN ({})
+                GROUP BY Month
+                ORDER BY Month
+            """.format(",".join([f"'{m}'" for m in recent_months]))
+            df_price_trend = pd.read_sql(query_price_trend, conn)
+
+    except Exception as e:
+        return jsonify({"error": f"쿼리 실행 오류: {str(e)}"})
+
+    return jsonify({
+        "total_shipment": df_total_shipment.to_dict("records"),
+        "shipment_ratio": df_shipment_ratio.to_dict("records"),
+        "price_trend": df_price_trend.to_dict("records")
+    })
+    
+
 # ✅ 데이터 조회 함수 (요약정보, 자재비, 부자재비, 상세조회 포함)
 def query_database(site_code):
     conn = get_db_connection()
