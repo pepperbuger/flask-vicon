@@ -67,17 +67,17 @@ def search():
         if isinstance(data[key], list):
             for row in data[key]:
                 for k, v in row.items():
-                    if isinstance(v, np.int64):
+                    if isinstance(v, (np.int64, np.float64)):  # ✅ float도 변환
                         row[k] = int(v)
 
-    return jsonify(data)  # ✅ JSON 응답 반환
+    return jsonify(data)
 
 # ✅ 세션에 데이터 저장 후 `/result`로 이동
 @app.route("/store_data", methods=["POST"])
 @login_required
 def store_data():
     session["data"] = request.get_json()
-    print(f"🔍 [DEBUG] 세션에 저장된 데이터: {session['data']}")  # ✅ 세션에 정상 저장되는지 확인 로그 추가
+    print(f"🔍 [DEBUG] 세션에 저장된 데이터: {session['data']}")  # ✅ 로그 추가
     return jsonify({"success": True})
 
 # ✅ 조회 결과 페이지
@@ -86,12 +86,11 @@ def store_data():
 def result():
     data = session.get("data", None)
     if not data:
-        print("❌ [ERROR] 세션 데이터 없음")  # ✅ 로그 추가
         return jsonify({"error": "세션에 데이터가 없습니다. 다시 검색하세요."}), 400
 
     return render_template("result.html", data=data)
 
-# ✅ 데이터 조회 함수 (요약정보, 자재비, 부자재비, 상세조회 포함)
+# ✅ 데이터 조회 함수 (예외 처리 강화)
 def query_database(site_code):
     conn = get_db_connection()
     if conn is None:
@@ -102,13 +101,8 @@ def query_database(site_code):
             print(f"🔍 DB에서 조회 중: SiteCode='{site_code}'")
 
             # ✅ 1. 요약 정보 조회
-            query_summary = f"""
-                SELECT SiteCode, SiteName, Quantity, ContractAmount 
-                FROM dbo.SiteInfo 
-                WHERE SiteCode = N'{site_code}'
-            """
+            query_summary = f"SELECT SiteCode, SiteName, Quantity, ContractAmount FROM dbo.SiteInfo WHERE SiteCode = N'{site_code}'"
             df_summary = pd.read_sql(query_summary, conn)
-
             if df_summary.empty:
                 return {"error": f"❌ '{site_code}'에 해당하는 데이터 없음."}
 
@@ -139,27 +133,15 @@ def query_database(site_code):
             """
             df_submaterial = pd.read_sql(query_submaterial, conn)
 
-            # ✅ 4. 현장 상세조회
-            query_details = f"""
-                SELECT s.SiteCode, s.TGType, s.Month, s.ShipmentQuantity, 
-                       u.Price, (s.ShipmentQuantity * u.Price) AS Amount
-                FROM dbo.ShipmentStatus s
-                LEFT JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-                WHERE s.SiteCode = N'{site_code}'
-                ORDER BY s.Month, s.TGType
-            """
-            df_details = pd.read_sql(query_details, conn)
-
             return {
                 "summary": df_summary.to_dict("records"),
                 "material": df_material.to_dict("records"),
                 "submaterial": df_submaterial.to_dict("records"),
-                "details": df_details.to_dict("records"),
             }
     except Exception as e:
         return {"error": f"쿼리 실행 오류: {str(e)}"}
 
-# ✅ 엑셀 다운로드 기능
+# ✅ 엑셀 다운로드 기능 (빈 데이터 예외 처리)
 @app.route("/download_excel")
 @login_required
 def download_excel():
@@ -170,20 +152,12 @@ def download_excel():
     output = io.BytesIO()
 
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        # ✅ 1. 요약 정보
-        pd.DataFrame(data["summary"]).to_excel(writer, sheet_name="요약정보", index=False)
-
-        # ✅ 2. 자재비
+        if "summary" in data and data["summary"]:
+            pd.DataFrame(data["summary"]).to_excel(writer, sheet_name="요약정보", index=False)
         if "material" in data and data["material"]:
             pd.DataFrame(data["material"]).to_excel(writer, sheet_name="자재비", index=False)
-
-        # ✅ 3. 부자재비
         if "submaterial" in data and data["submaterial"]:
             pd.DataFrame(data["submaterial"]).to_excel(writer, sheet_name="부자재비", index=False)
-
-        # ✅ 4. 상세조회
-        if "details" in data and data["details"]:
-            pd.DataFrame(data["details"]).to_excel(writer, sheet_name="현장 상세조회", index=False)
 
     output.seek(0)
     return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
