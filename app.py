@@ -180,28 +180,6 @@ def dashboard():
 
 
 # ✅ 대시보드 데이터 API (차트용 데이터 제공)
-import json
-import pyodbc
-import pandas as pd
-from flask import Flask, jsonify
-
-app = Flask(__name__)
-
-# ✅ 데이터베이스 연결 함수
-def get_db_connection():
-    try:
-        conn = pyodbc.connect(
-            "DRIVER={ODBC Driver 17 for SQL Server};"
-            "SERVER=your_host;"
-            "DATABASE=your_database;"
-            "UID=your_username;"
-            "PWD=your_password;"
-            "TrustServerCertificate=yes;"
-        )
-        return conn
-    except Exception as e:
-        print(f"❌ Database connection failed: {e}")
-        return None
 
 @app.route("/dashboard_data")
 def dashboard_data():
