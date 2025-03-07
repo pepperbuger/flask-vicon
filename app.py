@@ -201,22 +201,22 @@ def dashboard_data():
                     SELECT 
                         Month, 
                         CASE 
-                            WHEN SiteCode LIKE '%(DA)' THEN 'DA'
-                            WHEN SiteCode LIKE '%(DS)' THEN 'DS'
-                            WHEN SiteCode LIKE '%(DC)' THEN 'DC'
-                            WHEN SiteCode LIKE '%(KD)' THEN 'KD'
-                            ELSE 'D'
+                            WHEN SiteCode LIKE '%(DA)' THEN '대리점, 유통'
+                            WHEN SiteCode LIKE '%(DS)' THEN '납품'
+                            WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN '조달청'
+                            WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN '공사'
+                            ELSE '기타'
                         END AS Category,
                         SUM(ShipmentQuantity) AS CategoryShipment
                     FROM ShipmentStatus
                     WHERE Month >= FORMAT(DATEADD(MONTH, -11, GETDATE()), 'yyyy-MM')
                     GROUP BY Month, 
                         CASE 
-                            WHEN SiteCode LIKE '%(DA)' THEN 'DA'
-                            WHEN SiteCode LIKE '%(DS)' THEN 'DS'
-                            WHEN SiteCode LIKE '%(DC)' THEN 'DC'
-                            WHEN SiteCode LIKE '%(KD)' THEN 'KD'
-                            ELSE 'D'
+                            WHEN SiteCode LIKE '%(DA)' THEN '대리점, 유통'
+                            WHEN SiteCode LIKE '%(DS)' THEN '납품'
+                            WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN '조달청'
+                            WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN '공사'
+                            ELSE '기타'
                         END
                 )
                 SELECT 
