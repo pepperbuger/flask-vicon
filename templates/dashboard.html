@@ -55,7 +55,7 @@
     </div>
 
     <script>
-    fetch('/dashboard_data')
+fetch('/dashboard_data')
     .then(response => response.json())
     .then(data => {
         if (data.error) {
@@ -66,7 +66,7 @@
         const months = Object.keys(data.shipment_trend).sort();
         const totalShipments = months.map(month => data.shipment_trend[month].TotalShipment);
 
-        // ✅ 모든 출고 유형 포함 (DP + KD → 조달청)
+        // ✅ 출고 유형 포함 (DP + KD → 조달청)
         const categoryData = { "대리점, 유통": [], "납품": [], "조달청": [], "공사": [] };
         const categoryColors = {
             "대리점, 유통": "rgba(255, 99, 132, 0.8)",
@@ -116,6 +116,7 @@
             }
         });
     });
+
 
     </script>
 
