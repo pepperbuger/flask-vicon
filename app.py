@@ -199,30 +199,34 @@ def dashboard_data():
             CategoryShipment AS (
                 SELECT 
                     Month, 
-                    CASE 
-                        WHEN SiteCode LIKE '%(DA)' THEN '대리점, 유통'
-                        WHEN SiteCode LIKE '%(DS)' THEN '납품'
-                        WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN '조달청'
-                        WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN '공사'
-                        ELSE '기타'
-                    END AS Category,
+                    CAST(
+                        CASE 
+                            WHEN SiteCode LIKE '%(DA)' THEN N'대리점, 유통'
+                            WHEN SiteCode LIKE '%(DS)' THEN N'납품'
+                            WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN N'조달청'
+                            WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN N'공사'
+                            ELSE N'기타'
+                        END AS NVARCHAR(100)
+                    ) AS Category,
                     SUM(ShipmentQuantity) AS CategoryShipment
                 FROM ShipmentStatus
                 WHERE Month >= FORMAT(DATEADD(MONTH, -11, GETDATE()), 'yyyy-MM')
                 GROUP BY Month, 
-                    CASE 
-                        WHEN SiteCode LIKE '%(DA)' THEN '대리점, 유통'
-                        WHEN SiteCode LIKE '%(DS)' THEN '납품'
-                        WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN '조달청'
-                        WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN '공사'
-                        ELSE '기타'
-                    END
+                    CAST(
+                        CASE 
+                            WHEN SiteCode LIKE '%(DA)' THEN N'대리점, 유통'
+                            WHEN SiteCode LIKE '%(DS)' THEN N'납품'
+                            WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN N'조달청'
+                            WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN N'공사'
+                            ELSE N'기타'
+                        END AS NVARCHAR(100)
+                    )
             )
             SELECT 
                 c.Month, 
                 c.Category, 
-                COALESCE(c.CategoryShipment, 0) AS CategoryShipment,  -- ✅ NULL 방지
-                COALESCE(m.TotalShipment, 0) AS TotalShipment,  -- ✅ NULL 방지
+                COALESCE(c.CategoryShipment, 0) AS CategoryShipment,
+                COALESCE(m.TotalShipment, 0) AS TotalShipment,
                 COALESCE((c.CategoryShipment * 100.0 / NULLIF(m.TotalShipment, 0)), 0) AS Percentage
             FROM CategoryShipment c
             JOIN MonthlyShipment m ON c.Month = m.Month
@@ -230,6 +234,7 @@ def dashboard_data():
         """
 
         df = pd.read_sql_query(query, conn)
+        df["Category"] = df["Category"].astype(str)  # ✅ 한글 깨짐 방지
 
         # ✅ 데이터 가공 (UTF-8 인코딩)
         grouped_data = {}
