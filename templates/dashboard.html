@@ -55,17 +55,39 @@
     </div>
 
     <script>
-fetch('/dashboard_data')
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            console.error(data.error);
-            return;
-        }
-
-        const months = Object.keys(data.shipment_trend).sort();
-        const totalShipments = months.map(month => data.shipment_trend[month].TotalShipment);
-
+        fetch('/dashboard_data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error(data.error);
+                    return;
+                }
+        
+                const months = Object.keys(data.shipment_trend).sort();
+                const totalShipments = months.map(month => data.shipment_trend[month].TotalShipment || 0);
+        
+                // ✅ 출고량 추이 차트 추가
+                new Chart(document.getElementById("shipmentChart"), {
+                    type: "bar",
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            label: "출고량",
+                            data: totalShipments,
+                            backgroundColor: "rgba(0, 123, 255, 0.8)"
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: "출고량 추이"
+                            }
+                        }
+                    }
+                });
+        
         // ✅ 출고 유형 포함 (DP + KD → 조달청)
         const categoryData = { "대리점, 유통": [], "납품": [], "조달청": [], "공사": [] };
         const categoryColors = {
