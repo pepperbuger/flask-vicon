@@ -180,82 +180,82 @@ def dashboard():
 
 # ✅ 대시보드 데이터 API (차트용 데이터 제공)
 @app.route("/dashboard_data")
-@login_required
 def dashboard_data():
     conn = get_db_connection()
-    if conn is None:
-        return jsonify({"error": "DB 연결 실패!"})
 
     try:
-        with conn:
-            query = """
-                WITH MonthlyShipment AS (
-                    SELECT 
-                        Month, 
-                        SUM(ShipmentQuantity) AS TotalShipment
-                    FROM ShipmentStatus
-                    WHERE Month >= FORMAT(DATEADD(MONTH, -11, GETDATE()), 'yyyy-MM')
-                    GROUP BY Month
-                ),
-                CategoryShipment AS (
-                    SELECT 
-                        Month, 
-                        CASE 
-                            WHEN SiteCode LIKE '%(DA)' THEN '대리점, 유통'
-                            WHEN SiteCode LIKE '%(DS)' THEN '납품'
-                            WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN '조달청'
-                            WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN '공사'
-                            ELSE '기타'
-                        END AS Category,
-                        SUM(ShipmentQuantity) AS CategoryShipment
-                    FROM ShipmentStatus
-                    WHERE Month >= FORMAT(DATEADD(MONTH, -11, GETDATE()), 'yyyy-MM')
-                    GROUP BY Month, 
-                        CASE 
-                            WHEN SiteCode LIKE '%(DA)' THEN '대리점, 유통'
-                            WHEN SiteCode LIKE '%(DS)' THEN '납품'
-                            WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN '조달청'
-                            WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN '공사'
-                            ELSE '기타'
-                        END
-                )
+        query = """
+            WITH MonthlyShipment AS (
                 SELECT 
-                    c.Month, 
-                    c.Category, 
-                    c.CategoryShipment, 
-                    m.TotalShipment, 
-                    (c.CategoryShipment * 100.0 / NULLIF(m.TotalShipment, 0)) AS Percentage
-                FROM CategoryShipment c
-                JOIN MonthlyShipment m ON c.Month = m.Month
-                ORDER BY c.Month DESC, c.CategoryShipment DESC;
-            """
+                    Month, 
+                    SUM(ShipmentQuantity) AS TotalShipment
+                FROM ShipmentStatus
+                WHERE Month >= FORMAT(DATEADD(MONTH, -11, GETDATE()), 'yyyy-MM')
+                GROUP BY Month
+            ),
+            CategoryShipment AS (
+                SELECT 
+                    Month, 
+                    CASE 
+                        WHEN SiteCode LIKE '%(DA)' THEN '대리점, 유통'
+                        WHEN SiteCode LIKE '%(DS)' THEN '납품'
+                        WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN '조달청'
+                        WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN '공사'
+                        ELSE '기타'
+                    END AS Category,
+                    SUM(ShipmentQuantity) AS CategoryShipment
+                FROM ShipmentStatus
+                WHERE Month >= FORMAT(DATEADD(MONTH, -11, GETDATE()), 'yyyy-MM')
+                GROUP BY Month, 
+                    CASE 
+                        WHEN SiteCode LIKE '%(DA)' THEN '대리점, 유통'
+                        WHEN SiteCode LIKE '%(DS)' THEN '납품'
+                        WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN '조달청'
+                        WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN '공사'
+                        ELSE '기타'
+                    END
+            )
+            SELECT 
+                c.Month, 
+                c.Category, 
+                c.CategoryShipment, 
+                m.TotalShipment, 
+                (c.CategoryShipment * 100.0 / NULLIF(m.TotalShipment, 0)) AS Percentage
+            FROM CategoryShipment c
+            JOIN MonthlyShipment m ON c.Month = m.Month
+            ORDER BY c.Month DESC, c.CategoryShipment DESC;
+        """
 
-            df = pd.read_sql(query, conn)
+        df = pd.read_sql_query(query, conn)  # ✅ PyODBC와 호환되는 read_sql_query() 사용
 
-            # ✅ 데이터를 프론트엔드에서 쉽게 사용할 수 있도록 가공
-            grouped_data = {}
-            for _, row in df.iterrows():
-                month = row["Month"]
-                category = row["Category"]
-                total_shipment = row["TotalShipment"]
-                category_shipment = row["CategoryShipment"]
-                percentage = row["Percentage"]
 
-                if month not in grouped_data:
-                    grouped_data[month] = {
-                        "TotalShipment": total_shipment,
-                        "CategoryBreakdown": {}
-                    }
+        # ✅ 데이터 가공 (UTF-8 인코딩)
+        grouped_data = {}
+        for _, row in df.iterrows():
+            month = row["Month"]
+            category = row["Category"]
+            total_shipment = row["TotalShipment"]
+            category_shipment = row["CategoryShipment"]
+            percentage = row["Percentage"]
 
-                grouped_data[month]["CategoryBreakdown"][category] = {
-                    "Shipment": category_shipment,
-                    "Percentage": round(percentage, 2)
+            if month not in grouped_data:
+                grouped_data[month] = {
+                    "TotalShipment": total_shipment,
+                    "CategoryBreakdown": {}
                 }
 
-            return jsonify({"shipment_trend": grouped_data})
+            grouped_data[month]["CategoryBreakdown"][category] = {
+                "Shipment": category_shipment,
+                "Percentage": round(percentage, 2)
+            }
+
+        return json.dumps({"shipment_trend": grouped_data}, ensure_ascii=False), 200, {'Content-Type': 'application/json; charset=utf-8'}
 
     except Exception as e:
         return jsonify({"error": f"쿼리 실행 오류: {str(e)}"})
+
+    finally:
+        conn.close()  # ✅ 데이터베이스 연결 닫기
 
 # ✅ 조회 결과 페이지
 @app.route("/result")
