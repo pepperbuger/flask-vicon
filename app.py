@@ -6,6 +6,7 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from flask_session import Session  # Flask-Session 추가
 from dotenv import load_dotenv
 import io
+import json
 
 # ✅ 환경 변수 로드
 load_dotenv()
@@ -182,6 +183,8 @@ def dashboard():
 @app.route("/dashboard_data")
 def dashboard_data():
     conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "DB 연결 실패!"})
 
     try:
         query = """
@@ -218,16 +221,15 @@ def dashboard_data():
             SELECT 
                 c.Month, 
                 c.Category, 
-                c.CategoryShipment, 
-                m.TotalShipment, 
-                (c.CategoryShipment * 100.0 / NULLIF(m.TotalShipment, 0)) AS Percentage
+                COALESCE(c.CategoryShipment, 0) AS CategoryShipment,  -- ✅ NULL 방지
+                COALESCE(m.TotalShipment, 0) AS TotalShipment,  -- ✅ NULL 방지
+                COALESCE((c.CategoryShipment * 100.0 / NULLIF(m.TotalShipment, 0)), 0) AS Percentage
             FROM CategoryShipment c
             JOIN MonthlyShipment m ON c.Month = m.Month
             ORDER BY c.Month DESC, c.CategoryShipment DESC;
         """
 
-        df = pd.read_sql_query(query, conn)  # ✅ PyODBC와 호환되는 read_sql_query() 사용
-
+        df = pd.read_sql_query(query, conn)
 
         # ✅ 데이터 가공 (UTF-8 인코딩)
         grouped_data = {}
