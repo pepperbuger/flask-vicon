@@ -37,15 +37,7 @@
 
     <!-- KPI 카드 섹션 -->
     <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card bg-light">
-                <div class="card-body text-center">
-                    <h5 class="card-title">📊 전체 진행률</h5>
-                    <h2 class="card-text text-primary">{{ "{:.1f}%".format(data.get("progress", 0)) }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
             <div class="card bg-light">
                 <div class="card-body text-center">
                     <h5 class="card-title">📦 물량 진행률</h5>
@@ -53,7 +45,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
             <div class="card bg-light">
                 <div class="card-body text-center">
                     <h5 class="card-title">💵 총 비용</h5>
@@ -72,6 +64,13 @@
                     <canvas id="shipmentChart"></canvas>
                 </div>
             </div>
+            <!-- 주요 TG타입 월별 단가 차트 -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">주요 TG타입 월별 단가 추이</h5>
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
         </div>
         <div class="col-md-6">
             <div class="card">
@@ -83,46 +82,8 @@
         </div>
     </div>
 
-    <!-- 월별 단가 차트 -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">월별 단가 추이 (TG타입별)</h5>
-                    <canvas id="priceChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="mt-4">
         <a href="{{ url_for('download_excel') }}" class="btn btn-success">📥 엑셀 다운로드</a>
-    </div>
-
-    <!-- 필터링 섹션 -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">🔍 필터</h5>
-            <div class="row">
-                <div class="col-md-3">
-                    <label class="form-label">기간 선택</label>
-                    <input type="month" class="form-control" id="startMonth">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">종료 월</label>
-                    <input type="month" class="form-control" id="endMonth">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">TG타입</label>
-                    <select class="form-select" id="tgType">
-                        <option value="">전체</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-primary mt-4" onclick="applyFilters()">필터 적용</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- ✅ 1. 자재비 -->
@@ -282,11 +243,11 @@ function initializeCharts() {
         }
     });
 
-    // 월별 단가 차트
+    // 주요 TG타입 월별 단가 차트
     const priceCtx = document.getElementById('priceChart').getContext('2d');
     const priceData = {
         labels: {{ data.get('months', []) | tojson | safe }},
-        datasets: {{ data.get('price_datasets', []) | tojson | safe }}
+        datasets: [{{ data.get('main_tg_price_dataset', {}) | tojson | safe }}]
     };
 
     new Chart(priceCtx, {
