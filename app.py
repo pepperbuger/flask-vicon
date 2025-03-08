@@ -180,7 +180,7 @@ def dashboard():
                 FROM dbo.SiteInfo
             """
             df_total = pd.read_sql(query_total_sites, conn)
-            total_sites = df_total['total'].iloc[0]
+            total_sites = int(df_total['total'].iloc[0])
 
             # 2. 이번 달 출고량
             query_monthly_shipment = """
@@ -189,33 +189,25 @@ def dashboard():
                 WHERE Month = FORMAT(GETDATE(), 'yyyy-MM')
             """
             df_monthly = pd.read_sql(query_monthly_shipment, conn)
-            monthly_shipment = f"{df_monthly['total_shipment'].iloc[0]:,.0f}"
+            monthly_shipment = f"{int(df_monthly['total_shipment'].iloc[0]):,}"
 
             # 3. 평균 단가
             query_avg_price = """
-                SELECT AVG(Price) as avg_price
+                SELECT COALESCE(AVG(CAST(Price AS float)), 0) as avg_price
                 FROM dbo.UnitPrice
                 WHERE Month = FORMAT(GETDATE(), 'yyyy-MM')
             """
             df_price = pd.read_sql(query_avg_price, conn)
-            avg_price = f"{df_price['avg_price'].iloc[0]:,.0f}"
+            avg_price = f"{int(df_price['avg_price'].iloc[0]):,}"
 
-            # 4. 진행중인 현장 수 (80% 미만 진행률)
+            # 4. 진행중인 현장 수
             query_active_sites = """
-                WITH SiteProgress AS (
-                    SELECT 
-                        s.SiteCode,
-                        SUM(s.ShipmentQuantity) * 100.0 / si.Quantity as progress
-                    FROM dbo.ShipmentStatus s
-                    JOIN dbo.SiteInfo si ON s.SiteCode = si.SiteCode
-                    GROUP BY s.SiteCode, si.Quantity
-                )
-                SELECT COUNT(*) as active_count
-                FROM SiteProgress
-                WHERE progress < 80
+                SELECT COUNT(DISTINCT SiteCode) as active_count
+                FROM dbo.ShipmentStatus
+                WHERE Month = FORMAT(GETDATE(), 'yyyy-MM')
             """
             df_active = pd.read_sql(query_active_sites, conn)
-            active_sites = df_active['active_count'].iloc[0]
+            active_sites = int(df_active['active_count'].iloc[0])
 
             # 5. 월별 출고량 추이 (최근 12개월)
             query_monthly_trend = """
@@ -256,42 +248,33 @@ def dashboard():
             site_types = df_types['site_type'].tolist()
             site_type_counts = df_types['count'].tolist()
 
-            # 7. 최근 현장 목록 (최근 5개)
-            query_recent_sites = """
-                WITH SiteProgress AS (
-                    SELECT 
-                        s.SiteCode,
-                        si.SiteName,
-                        si.Quantity,
-                        SUM(s.ShipmentQuantity) * 100.0 / si.Quantity as progress
-                    FROM dbo.ShipmentStatus s
-                    JOIN dbo.SiteInfo si ON s.SiteCode = si.SiteCode
-                    GROUP BY s.SiteCode, si.SiteName, si.Quantity
-                )
-                SELECT TOP 5 *,
-                    CASE 
-                        WHEN progress >= 80 THEN N'완료'
-                        WHEN progress >= 50 THEN N'진행중'
-                        ELSE N'초기'
-                    END as status,
-                    CASE 
-                        WHEN progress >= 80 THEN 'bg-success'
-                        WHEN progress >= 50 THEN 'bg-warning'
-                        ELSE 'bg-info'
-                    END as status_class
-                FROM SiteProgress
+            # 7. 최근 현장 목록
+            query_recent = """
+                SELECT TOP 5
+                    s.SiteCode,
+                    si.SiteName,
+                    si.Quantity,
+                    CAST(SUM(s.ShipmentQuantity) * 100.0 / si.Quantity as float) as progress
+                FROM dbo.ShipmentStatus s
+                JOIN dbo.SiteInfo si ON s.SiteCode = si.SiteCode
+                GROUP BY s.SiteCode, si.SiteName, si.Quantity
                 ORDER BY progress DESC
             """
-            df_recent = pd.read_sql(query_recent_sites, conn)
+            df_recent = pd.read_sql(query_recent, conn)
+            
             recent_sites = []
             for _, row in df_recent.iterrows():
+                progress = float(row['progress'])
+                status = '완료' if progress >= 80 else '진행중' if progress >= 50 else '초기'
+                status_class = 'bg-success' if progress >= 80 else 'bg-warning' if progress >= 50 else 'bg-info'
+                
                 recent_sites.append({
                     'code': row['SiteCode'],
                     'name': row['SiteName'],
-                    'quantity': f"{row['Quantity']:,.0f}",
-                    'progress': f"{row['progress']:.1f}",
-                    'status': row['status'],
-                    'status_class': row['status_class']
+                    'quantity': f"{int(row['Quantity']):,}",
+                    'progress': f"{progress:.1f}",
+                    'status': status,
+                    'status_class': status_class
                 })
 
             return render_template("dashboard.html",
@@ -309,10 +292,21 @@ def dashboard():
         import traceback
         error_message = traceback.format_exc()
         print(f"❌ 대시보드 데이터 조회 오류: {error_message}")
-        return render_template("dashboard.html", error=str(e))
+        return render_template("dashboard.html", 
+                            error="데이터 조회 중 오류가 발생했습니다.",
+                            total_sites=0,
+                            monthly_shipment="0",
+                            avg_price="0",
+                            active_sites=0,
+                            months=[],
+                            monthly_data=[],
+                            site_types=[],
+                            site_type_counts=[],
+                            recent_sites=[])
 
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
 # ✅ 대시보드 데이터 API (차트용 데이터 제공)
