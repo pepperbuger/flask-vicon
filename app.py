@@ -401,28 +401,45 @@ def query_database(site_code):
             tg_type_quantities = df_tg_dist['TotalQuantity'].tolist()
 
             # ✅ 월별 단가 데이터 조회
-            query_monthly_price = f"""
-                SELECT s.Month, s.TGType, AVG(u.Price) as AvgPrice
-                FROM dbo.ShipmentStatus s
-                JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
-                WHERE s.SiteCode = N'{site_code}'
-                GROUP BY s.Month, s.TGType
-                ORDER BY s.Month, s.TGType
-            """
-            df_monthly_price = pd.read_sql(query_monthly_price, conn)
+            # 출고량이 가장 많은 TG타입 찾기
+            if not df_tg_dist.empty:
+                main_tg_type = df_tg_dist.loc[df_tg_dist['TotalQuantity'].idxmax(), 'TGType']
+                print(f"✅ 주요 TG타입: {main_tg_type}")
+                
+                query_monthly_price = f"""
+                    SELECT 
+                        s.Month,
+                        s.TGType,
+                        CAST(AVG(CAST(u.Price AS float)) AS float) as AvgPrice
+                    FROM dbo.ShipmentStatus s
+                    JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
+                    WHERE s.SiteCode = N'{site_code}'
+                    AND s.TGType = N'{main_tg_type}'
+                    GROUP BY s.Month, s.TGType
+                    ORDER BY s.Month
+                """
+                df_monthly_price = pd.read_sql(query_monthly_price, conn)
+                print(f"✅ 월별 단가 데이터 조회 완료 (행 개수: {len(df_monthly_price)})")
+                print(f"✅ 단가 데이터: {df_monthly_price['AvgPrice'].tolist()}")
+                
+                price_data = df_monthly_price['AvgPrice'].tolist() if not df_monthly_price.empty else []
+            else:
+                main_tg_type = ''
+                price_data = []
+                print("❌ TG타입 데이터가 없습니다.")
 
-            # 월별 단가 데이터셋 준비
-            price_datasets = []
-            colors = ['rgb(255, 99, 132)', 'rgb(54, 162, 235)', 'rgb(255, 206, 86)', 'rgb(75, 192, 192)']
-            
-            for i, tg_type in enumerate(df_monthly_price['TGType'].unique()):
-                mask = df_monthly_price['TGType'] == tg_type
-                price_datasets.append({
-                    'label': f'{tg_type}',
-                    'data': df_monthly_price[mask]['AvgPrice'].tolist(),
-                    'borderColor': colors[i % len(colors)],
-                    'fill': False
-                })
+            # 주요 TG타입 단가 데이터셋 준비
+            main_tg_price_dataset = {
+                'label': f'{main_tg_type} 단가 추이',
+                'data': price_data,
+                'borderColor': 'rgb(75, 192, 192)',
+                'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                'borderWidth': 2,
+                'fill': False,
+                'tension': 0.4
+            }
+
+            print(f"✅ 차트 데이터셋 준비 완료: {main_tg_price_dataset}")
 
             return {
                 "summary": df_summary.to_dict("records") if not df_summary.empty else [],
@@ -436,7 +453,7 @@ def query_database(site_code):
                 "monthly_shipments": monthly_shipments,
                 "tg_types": tg_types,
                 "tg_type_quantities": tg_type_quantities,
-                "price_datasets": price_datasets
+                "main_tg_price_dataset": main_tg_price_dataset
             }
     except Exception as e:
         import traceback

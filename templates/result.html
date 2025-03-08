@@ -245,21 +245,23 @@ function initializeCharts() {
 
     // 주요 TG타입 월별 단가 차트
     const priceCtx = document.getElementById('priceChart').getContext('2d');
-    const priceData = {
-        labels: {{ data.get('months', []) | tojson | safe }},
-        datasets: [{
-            label: {{ data.get('main_tg_price_dataset', {}).get('label', '') | tojson | safe }},
-            data: {{ data.get('main_tg_price_dataset', {}).get('data', []) | tojson | safe }},
-            borderColor: 'rgb(75, 192, 192)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            borderWidth: 2,
-            fill: false
-        }]
-    };
+    const mainTgPriceDataset = {{ data.get('main_tg_price_dataset', {}) | tojson | safe }};
+    console.log('단가 데이터:', mainTgPriceDataset); // 디버그 로그
 
     new Chart(priceCtx, {
         type: 'line',
-        data: priceData,
+        data: {
+            labels: {{ data.get('months', []) | tojson | safe }},
+            datasets: [{
+                label: mainTgPriceDataset.label || '단가 추이',
+                data: mainTgPriceDataset.data || [],
+                borderColor: mainTgPriceDataset.borderColor || 'rgb(75, 192, 192)',
+                backgroundColor: mainTgPriceDataset.backgroundColor || 'rgba(75, 192, 192, 0.2)',
+                borderWidth: mainTgPriceDataset.borderWidth || 2,
+                fill: false,
+                tension: 0.4
+            }]
+        },
         options: {
             responsive: true,
             scales: {
