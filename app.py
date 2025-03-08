@@ -7,6 +7,7 @@ from flask_session import Session  # Flask-Session 추가
 from dotenv import load_dotenv
 import io
 import json
+import numpy as np
 
 # ✅ 환경 변수 로드
 load_dotenv()
@@ -275,6 +276,22 @@ def result():
     if not data:
         return jsonify({"error": "세션에 데이터가 없습니다. 다시 검색하세요."}), 400
 
+    # 진행률 계산
+    progress_data = calculate_project_progress(
+        data['summary'],
+        data.get('material', []),
+        data.get('submaterial', [])
+    )
+    
+    # 데이터 딕셔너리에 진행률 정보 추가
+    data.update({
+        'progress': progress_data['overall_progress'],
+        'quantity_progress': progress_data['quantity_progress'],
+        'cost_progress': progress_data['cost_progress'],
+        'total_shipment': progress_data['total_shipment'],
+        'total_cost': progress_data['total_cost']
+    })
+
     return render_template("result.html", data=data)
 
 # ✅ 데이터 조회 함수
@@ -484,3 +501,30 @@ if __name__ == "__main__":
 
 # 웹브라우저에 디버그 표시
 app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "false").lower() == "true"    
+
+def calculate_project_progress(summary_data, material_data, submaterial_data):
+    """
+    프로젝트 전체 진행률을 계산하는 함수
+    """
+    # 1. 물량 기준 진행률 계산
+    contract_quantity = summary_data[0]['Quantity']
+    total_shipment_quantity = sum(row['TotalQuantity'] for row in material_data)
+    quantity_progress = (total_shipment_quantity / contract_quantity * 100) if contract_quantity > 0 else 0
+
+    # 2. 금액 기준 진행률 계산
+    contract_amount = summary_data[0]['ContractAmount']
+    total_material_cost = sum(row['TotalAmount'] for row in material_data)
+    total_submaterial_cost = sum(row['TotalAmount'] for row in submaterial_data)
+    total_cost = total_material_cost + total_submaterial_cost
+    cost_progress = (total_cost / contract_amount * 100) if contract_amount > 0 else 0
+
+    # 3. 종합 진행률 계산 (물량과 금액 진행률의 평균)
+    overall_progress = (quantity_progress + cost_progress) / 2
+
+    return {
+        'overall_progress': round(overall_progress, 1),
+        'quantity_progress': round(quantity_progress, 1),
+        'cost_progress': round(cost_progress, 1),
+        'total_shipment': total_shipment_quantity,
+        'total_cost': total_cost
+    }    
