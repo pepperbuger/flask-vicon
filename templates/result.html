@@ -245,14 +245,21 @@ function initializeCharts() {
 
     // 주요 TG타입 월별 단가 차트
     const priceCtx = document.getElementById('priceChart').getContext('2d');
-    const mainTgPriceDataset = {{ data.get('main_tg_price_dataset', {}) | tojson | safe }};
-    
+    const priceData = {
+        labels: {{ data.get('months', []) | tojson | safe }},
+        datasets: [{
+            label: {{ data.get('main_tg_price_dataset', {}).get('label', '') | tojson | safe }},
+            data: {{ data.get('main_tg_price_dataset', {}).get('data', []) | tojson | safe }},
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderWidth: 2,
+            fill: false
+        }]
+    };
+
     new Chart(priceCtx, {
         type: 'line',
-        data: {
-            labels: {{ data.get('months', []) | tojson | safe }},
-            datasets: [mainTgPriceDataset]
-        },
+        data: priceData,
         options: {
             responsive: true,
             scales: {
@@ -261,25 +268,19 @@ function initializeCharts() {
                     title: {
                         display: true,
                         text: '단가 (원/㎡)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return new Intl.NumberFormat('ko-KR').format(value) + '원';
+                        }
                     }
                 }
             },
             plugins: {
-                legend: {
-                    display: true,
-                    position: 'top'
-                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += new Intl.NumberFormat('ko-KR').format(context.parsed.y) + ' 원/㎡';
-                            }
-                            return label;
+                            return new Intl.NumberFormat('ko-KR').format(context.parsed.y) + ' 원/㎡';
                         }
                     }
                 }
