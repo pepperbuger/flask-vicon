@@ -375,14 +375,43 @@ def query_database(site_code):
             df_details = pd.read_sql(query_details, conn)
             print(f"✅ 현장 상세조회 데이터 조회 완료 (행 개수: {len(df_details)})")
 
-            # ✅ 데이터가 없을 경우 빈 리스트 반환하여 KeyError 방지
+            # ✅ 월별 출고량 데이터 조회
+            query_monthly = f"""
+                SELECT Month, SUM(ShipmentQuantity) as MonthlyShipment
+                FROM dbo.ShipmentStatus
+                WHERE SiteCode = N'{site_code}'
+                GROUP BY Month
+                ORDER BY Month
+            """
+            df_monthly = pd.read_sql(query_monthly, conn)
+
+            # ✅ TG타입별 물량 분포 데이터
+            query_tg_distribution = f"""
+                SELECT TGType, SUM(ShipmentQuantity) as TotalQuantity
+                FROM dbo.ShipmentStatus
+                WHERE SiteCode = N'{site_code}'
+                GROUP BY TGType
+            """
+            df_tg_dist = pd.read_sql(query_tg_distribution, conn)
+
+            # 차트 데이터 준비
+            months = df_monthly['Month'].tolist()
+            monthly_shipments = df_monthly['MonthlyShipment'].tolist()
+            tg_types = df_tg_dist['TGType'].tolist()
+            tg_type_quantities = df_tg_dist['TotalQuantity'].tolist()
+
             return {
                 "summary": df_summary.to_dict("records") if not df_summary.empty else [],
                 "material": df_material.to_dict("records") if not df_material.empty else [],
                 "material_total": material_total,
                 "submaterial": df_submaterial.to_dict("records") if not df_submaterial.empty else [],
                 "submaterial_total": submaterial_total,
-                "details": df_details.to_dict("records") if not df_details.empty else []
+                "details": df_details.to_dict("records") if not df_details.empty else [],
+                # 차트 데이터 추가
+                "months": months,
+                "monthly_shipments": monthly_shipments,
+                "tg_types": tg_types,
+                "tg_type_quantities": tg_type_quantities
             }
     except Exception as e:
         import traceback

@@ -214,35 +214,57 @@
 function initializeCharts() {
     // 월별 출고량 차트
     const shipmentCtx = document.getElementById('shipmentChart').getContext('2d');
+    const monthlyData = {
+        labels: {{ data.get('months', []) | tojson | safe }},
+        datasets: [{
+            label: '월별 출고량',
+            data: {{ data.get('monthly_shipments', []) | tojson | safe }},
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    };
+    
     new Chart(shipmentCtx, {
         type: 'bar',
-        data: {
-            labels: {{ data.get('months', []) | tojson }},
-            datasets: [{
-                label: '월별 출고량',
-                data: {{ data.get('monthly_shipments', []) | tojson }},
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }]
+        data: monthlyData,
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
         }
     });
 
     // TG타입별 분포 차트
     const tgTypeCtx = document.getElementById('tgTypeChart').getContext('2d');
+    const tgTypeData = {
+        labels: {{ data.get('tg_types', []) | tojson | safe }},
+        datasets: [{
+            data: {{ data.get('tg_type_quantities', []) | tojson | safe }},
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)'
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)'
+            ],
+            borderWidth: 1
+        }]
+    };
+
     new Chart(tgTypeCtx, {
         type: 'pie',
-        data: {
-            labels: {{ data.get('tg_types', []) | tojson }},
-            datasets: [{
-                data: {{ data.get('tg_type_quantities', []) | tojson }},
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)',
-                    'rgba(75, 192, 192, 0.2)'
-                ]
-            }]
+        data: tgTypeData,
+        options: {
+            responsive: true
         }
     });
 }
