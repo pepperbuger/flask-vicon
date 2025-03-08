@@ -400,6 +400,30 @@ def query_database(site_code):
             tg_types = df_tg_dist['TGType'].tolist()
             tg_type_quantities = df_tg_dist['TotalQuantity'].tolist()
 
+            # ✅ 월별 단가 데이터 조회
+            query_monthly_price = f"""
+                SELECT s.Month, s.TGType, AVG(u.Price) as AvgPrice
+                FROM dbo.ShipmentStatus s
+                JOIN dbo.UnitPrice u ON s.TGType = u.TGType AND s.Month = u.Month
+                WHERE s.SiteCode = N'{site_code}'
+                GROUP BY s.Month, s.TGType
+                ORDER BY s.Month, s.TGType
+            """
+            df_monthly_price = pd.read_sql(query_monthly_price, conn)
+
+            # 월별 단가 데이터셋 준비
+            price_datasets = []
+            colors = ['rgb(255, 99, 132)', 'rgb(54, 162, 235)', 'rgb(255, 206, 86)', 'rgb(75, 192, 192)']
+            
+            for i, tg_type in enumerate(df_monthly_price['TGType'].unique()):
+                mask = df_monthly_price['TGType'] == tg_type
+                price_datasets.append({
+                    'label': f'{tg_type}',
+                    'data': df_monthly_price[mask]['AvgPrice'].tolist(),
+                    'borderColor': colors[i % len(colors)],
+                    'fill': False
+                })
+
             return {
                 "summary": df_summary.to_dict("records") if not df_summary.empty else [],
                 "material": df_material.to_dict("records") if not df_material.empty else [],
@@ -407,11 +431,12 @@ def query_database(site_code):
                 "submaterial": df_submaterial.to_dict("records") if not df_submaterial.empty else [],
                 "submaterial_total": submaterial_total,
                 "details": df_details.to_dict("records") if not df_details.empty else [],
-                # 차트 데이터 추가
+                # 차트 데이터
                 "months": months,
                 "monthly_shipments": monthly_shipments,
                 "tg_types": tg_types,
-                "tg_type_quantities": tg_type_quantities
+                "tg_type_quantities": tg_type_quantities,
+                "price_datasets": price_datasets
             }
     except Exception as e:
         import traceback

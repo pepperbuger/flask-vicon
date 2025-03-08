@@ -9,35 +9,35 @@
 <body class="container mt-5">
     <h1>📋 조회 결과</h1>
 
-    <!-- 필터링 섹션 -->
+    <!-- ✅ 요약 정보 -->
+    {% if data and 'summary' in data and data['summary'] %}
     <div class="card mb-4">
         <div class="card-body">
-            <h5 class="card-title">🔍 필터</h5>
             <div class="row">
                 <div class="col-md-3">
-                    <label class="form-label">기간 선택</label>
-                    <input type="month" class="form-control" id="startMonth">
+                    <h5 class="card-title">현장코드</h5>
+                    <p class="h4">{{ data['summary'][0]['SiteCode'] }}</p>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">종료 월</label>
-                    <input type="month" class="form-control" id="endMonth">
+                    <h5 class="card-title">현장명</h5>
+                    <p class="h4">{{ data['summary'][0]['SiteName'] }}</p>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">TG타입</label>
-                    <select class="form-select" id="tgType">
-                        <option value="">전체</option>
-                    </select>
+                    <h5 class="card-title">계약물량</h5>
+                    <p class="h4">{{ "{:,.0f}".format(data['summary'][0]['Quantity']) }} ㎡</p>
                 </div>
                 <div class="col-md-3">
-                    <button class="btn btn-primary mt-4" onclick="applyFilters()">필터 적용</button>
+                    <h5 class="card-title">계약금액</h5>
+                    <p class="h4">{{ "{:,.0f}".format(data['summary'][0]['ContractAmount']) }} 원</p>
                 </div>
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- KPI 카드 섹션 -->
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card bg-light">
                 <div class="card-body text-center">
                     <h5 class="card-title">📊 전체 진행률</h5>
@@ -45,7 +45,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card bg-light">
                 <div class="card-body text-center">
                     <h5 class="card-title">📦 물량 진행률</h5>
@@ -53,15 +53,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-light">
-                <div class="card-body text-center">
-                    <h5 class="card-title">💰 금액 진행률</h5>
-                    <h2 class="card-text text-info">{{ "{:.1f}%".format(data.get("cost_progress", 0)) }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card bg-light">
                 <div class="card-body text-center">
                     <h5 class="card-title">💵 총 비용</h5>
@@ -91,19 +83,48 @@
         </div>
     </div>
 
-    <!-- ✅ 요약 정보 -->
-    {% if data and 'summary' in data and data['summary'] %}
-    <ul class="list-group mb-4">
-        <li class="list-group-item"><strong>현장코드:</strong> {{ data['summary'][0]['SiteCode'] }}</li>
-        <li class="list-group-item"><strong>현장명:</strong> {{ data['summary'][0]['SiteName'] }}</li>
-        <li class="list-group-item"><strong>계약물량:</strong> {{ "{:,.0f}".format(data['summary'][0]['Quantity']) }} ㎡</li>
-        <li class="list-group-item"><strong>계약금액:</strong> {{ "{:,.0f}".format(data['summary'][0]['ContractAmount']) }} 원</li>
-    </ul>
-    {% endif %}
+    <!-- 월별 단가 차트 -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">월별 단가 추이 (TG타입별)</h5>
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="mt-4">
         <a href="{{ url_for('download_excel') }}" class="btn btn-success">📥 엑셀 다운로드</a>
     </div>
-    
+
+    <!-- 필터링 섹션 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">🔍 필터</h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">기간 선택</label>
+                    <input type="month" class="form-control" id="startMonth">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">종료 월</label>
+                    <input type="month" class="form-control" id="endMonth">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">TG타입</label>
+                    <select class="form-select" id="tgType">
+                        <option value="">전체</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary mt-4" onclick="applyFilters()">필터 적용</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ✅ 1. 자재비 -->
     <h2>🏗️ 1. 자재비</h2>
     <table class="table table-bordered">
@@ -210,7 +231,6 @@
     {% endif %}
 </body>
 <script>
-// 차트 초기화 함수
 function initializeCharts() {
     // 월별 출고량 차트
     const shipmentCtx = document.getElementById('shipmentChart').getContext('2d');
@@ -250,12 +270,6 @@ function initializeCharts() {
                 'rgba(255, 206, 86, 0.2)',
                 'rgba(75, 192, 192, 0.2)'
             ],
-            borderColor: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)'
-            ],
             borderWidth: 1
         }]
     };
@@ -267,9 +281,32 @@ function initializeCharts() {
             responsive: true
         }
     });
+
+    // 월별 단가 차트
+    const priceCtx = document.getElementById('priceChart').getContext('2d');
+    const priceData = {
+        labels: {{ data.get('months', []) | tojson | safe }},
+        datasets: {{ data.get('price_datasets', []) | tojson | safe }}
+    };
+
+    new Chart(priceCtx, {
+        type: 'line',
+        data: priceData,
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: '단가 (원/㎡)'
+                    }
+                }
+            }
+        }
+    });
 }
 
-// 페이지 로드 시 차트 초기화
 document.addEventListener('DOMContentLoaded', initializeCharts);
 </script>
 </html>
