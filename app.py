@@ -165,19 +165,154 @@ def store_data():
 
 
 # ✅ 대시보드 페이지 
-@app.route("/dashboard", methods=["GET", "POST"])
+@app.route("/dashboard")
 @login_required
 def dashboard():
-    if request.method == "POST":
-        site_code = request.form.get("site_code").strip()
-        if not site_code:
-            return render_template("index.html", error="❌ 현장코드를 입력하세요.")
+    conn = get_db_connection()
+    if conn is None:
+        return render_template("dashboard.html", error="DB 연결 실패")
 
-        data = query_database(site_code)
-        session["data"] = data  # ✅ 세션에 데이터 저장
-        return redirect(url_for("result"))
+    try:
+        with conn:
+            # 1. 총 현장 수
+            query_total_sites = """
+                SELECT COUNT(DISTINCT SiteCode) as total
+                FROM dbo.SiteInfo
+            """
+            df_total = pd.read_sql(query_total_sites, conn)
+            total_sites = df_total['total'].iloc[0]
 
-    return render_template("dashboard.html")
+            # 2. 이번 달 출고량
+            query_monthly_shipment = """
+                SELECT COALESCE(SUM(ShipmentQuantity), 0) as total_shipment
+                FROM dbo.ShipmentStatus
+                WHERE Month = FORMAT(GETDATE(), 'yyyy-MM')
+            """
+            df_monthly = pd.read_sql(query_monthly_shipment, conn)
+            monthly_shipment = f"{df_monthly['total_shipment'].iloc[0]:,.0f}"
+
+            # 3. 평균 단가
+            query_avg_price = """
+                SELECT AVG(Price) as avg_price
+                FROM dbo.UnitPrice
+                WHERE Month = FORMAT(GETDATE(), 'yyyy-MM')
+            """
+            df_price = pd.read_sql(query_avg_price, conn)
+            avg_price = f"{df_price['avg_price'].iloc[0]:,.0f}"
+
+            # 4. 진행중인 현장 수 (80% 미만 진행률)
+            query_active_sites = """
+                WITH SiteProgress AS (
+                    SELECT 
+                        s.SiteCode,
+                        SUM(s.ShipmentQuantity) * 100.0 / si.Quantity as progress
+                    FROM dbo.ShipmentStatus s
+                    JOIN dbo.SiteInfo si ON s.SiteCode = si.SiteCode
+                    GROUP BY s.SiteCode, si.Quantity
+                )
+                SELECT COUNT(*) as active_count
+                FROM SiteProgress
+                WHERE progress < 80
+            """
+            df_active = pd.read_sql(query_active_sites, conn)
+            active_sites = df_active['active_count'].iloc[0]
+
+            # 5. 월별 출고량 추이 (최근 12개월)
+            query_monthly_trend = """
+                SELECT 
+                    Month,
+                    SUM(ShipmentQuantity) as total_quantity
+                FROM dbo.ShipmentStatus
+                WHERE Month >= FORMAT(DATEADD(MONTH, -11, GETDATE()), 'yyyy-MM')
+                GROUP BY Month
+                ORDER BY Month
+            """
+            df_trend = pd.read_sql(query_monthly_trend, conn)
+            months = df_trend['Month'].tolist()
+            monthly_data = df_trend['total_quantity'].tolist()
+
+            # 6. 현장 유형별 분포
+            query_site_types = """
+                SELECT 
+                    CASE 
+                        WHEN SiteCode LIKE '%(DA)' THEN N'대리점'
+                        WHEN SiteCode LIKE '%(DS)' THEN N'납품'
+                        WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN N'조달'
+                        WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN N'공사'
+                        ELSE N'기타'
+                    END as site_type,
+                    COUNT(*) as count
+                FROM dbo.SiteInfo
+                GROUP BY 
+                    CASE 
+                        WHEN SiteCode LIKE '%(DA)' THEN N'대리점'
+                        WHEN SiteCode LIKE '%(DS)' THEN N'납품'
+                        WHEN SiteCode LIKE '%(KD)' OR SiteCode LIKE '%(DP)' THEN N'조달'
+                        WHEN SiteCode LIKE '%(DC)' OR SiteCode LIKE '%(D)' THEN N'공사'
+                        ELSE N'기타'
+                    END
+            """
+            df_types = pd.read_sql(query_site_types, conn)
+            site_types = df_types['site_type'].tolist()
+            site_type_counts = df_types['count'].tolist()
+
+            # 7. 최근 현장 목록 (최근 5개)
+            query_recent_sites = """
+                WITH SiteProgress AS (
+                    SELECT 
+                        s.SiteCode,
+                        si.SiteName,
+                        si.Quantity,
+                        SUM(s.ShipmentQuantity) * 100.0 / si.Quantity as progress
+                    FROM dbo.ShipmentStatus s
+                    JOIN dbo.SiteInfo si ON s.SiteCode = si.SiteCode
+                    GROUP BY s.SiteCode, si.SiteName, si.Quantity
+                )
+                SELECT TOP 5 *,
+                    CASE 
+                        WHEN progress >= 80 THEN N'완료'
+                        WHEN progress >= 50 THEN N'진행중'
+                        ELSE N'초기'
+                    END as status,
+                    CASE 
+                        WHEN progress >= 80 THEN 'bg-success'
+                        WHEN progress >= 50 THEN 'bg-warning'
+                        ELSE 'bg-info'
+                    END as status_class
+                FROM SiteProgress
+                ORDER BY progress DESC
+            """
+            df_recent = pd.read_sql(query_recent_sites, conn)
+            recent_sites = []
+            for _, row in df_recent.iterrows():
+                recent_sites.append({
+                    'code': row['SiteCode'],
+                    'name': row['SiteName'],
+                    'quantity': f"{row['Quantity']:,.0f}",
+                    'progress': f"{row['progress']:.1f}",
+                    'status': row['status'],
+                    'status_class': row['status_class']
+                })
+
+            return render_template("dashboard.html",
+                                total_sites=total_sites,
+                                monthly_shipment=monthly_shipment,
+                                avg_price=avg_price,
+                                active_sites=active_sites,
+                                months=months,
+                                monthly_data=monthly_data,
+                                site_types=site_types,
+                                site_type_counts=site_type_counts,
+                                recent_sites=recent_sites)
+
+    except Exception as e:
+        import traceback
+        error_message = traceback.format_exc()
+        print(f"❌ 대시보드 데이터 조회 오류: {error_message}")
+        return render_template("dashboard.html", error=str(e))
+
+    finally:
+        conn.close()
 
 
 # ✅ 대시보드 데이터 API (차트용 데이터 제공)

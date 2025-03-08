@@ -12,135 +12,248 @@
             background-color: #f4f6f9;
             padding: 20px;
         }
-        .chart-container {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        .search-section {
+            background-color: #f8f9fa;
+            border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
-            width: 100%;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
         }
-        canvas {
-            width: 100% !important;
-            height: auto !important;
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .summary-card {
+            transition: transform 0.2s;
+        }
+        .summary-card:hover {
+            transform: translateY(-5px);
+        }
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 10px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 14px;
         }
     </style>
 </head>
-<body class="container mt-5">
-
-    <!-- ✅ 현장 조회 입력창 -->
-    <h1>🏗️ 현장코드 조회</h1>
-    <form action="{{ url_for('dashboard') }}" method="post" class="mb-4">
-        <div class="input-group">
-            <input type="text" name="site_code" class="form-control" placeholder="예: 현대인천청라(D)" required>
-            <button type="submit" class="btn btn-primary">조회</button>
+<body class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>📊 현장관리 대시보드</h1>
+        <div>
+            <button class="btn btn-outline-secondary" onclick="refreshData()">
+                🔄 새로고침
+            </button>
         </div>
-    </form>
-
-    <h1>📊 대시보드</h1>
-
-    <!-- ✅ 출고량 추이 차트 -->
-    <div class="chart-container">
-        <h3>📉 출고량 추이</h3>
-        <canvas id="shipmentChart"></canvas>
     </div>
 
-    <!-- ✅ 출고 유형별 비율 차트 -->
-    <div class="chart-container">
-        <h3>📈 출고 유형별 비율</h3>
-        <canvas id="categoryPercentageChart"></canvas>
+    <!-- 검색 섹션 -->
+    <div class="search-section mb-4">
+        <div class="row align-items-end">
+            <div class="col-md-12">
+                <h5>🔍 현장 검색</h5>
+                <div class="input-group">
+                    <input type="text" id="siteCode" class="form-control" placeholder="현장코드를 입력하세요">
+                    <button class="btn btn-primary" onclick="searchSite()">검색</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 요약 통계 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body text-center">
+                    <div class="stat-label">총 현장 수</div>
+                    <div class="stat-value text-primary">{{ total_sites }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body text-center">
+                    <div class="stat-label">이번 달 출고량</div>
+                    <div class="stat-value text-success">{{ monthly_shipment }} ㎡</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body text-center">
+                    <div class="stat-label">평균 단가</div>
+                    <div class="stat-value text-info">{{ avg_price }} 원/㎡</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body text-center">
+                    <div class="stat-label">진행중인 현장</div>
+                    <div class="stat-value text-warning">{{ active_sites }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 차트 섹션 -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">월별 출고량 추이</h5>
+                    <div class="chart-container">
+                        <canvas id="shipmentTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">현장 유형별 분포</h5>
+                    <div class="chart-container">
+                        <canvas id="siteTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 최근 현장 목록 -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5 class="card-title">📋 최근 현장 목록</h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>현장코드</th>
+                            <th>현장명</th>
+                            <th>계약물량</th>
+                            <th>진행률</th>
+                            <th>상태</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for site in recent_sites %}
+                        <tr>
+                            <td>{{ site.code }}</td>
+                            <td>{{ site.name }}</td>
+                            <td>{{ site.quantity }} ㎡</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: {{ site.progress }}%"
+                                         aria-valuenow="{{ site.progress }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ site.progress }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {{ site.status_class }}">
+                                    {{ site.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
-        fetch('/dashboard_data')
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    console.error(data.error);
-                    return;
-                }
-        
-                const months = Object.keys(data.shipment_trend).sort();
-                const totalShipments = months.map(month => data.shipment_trend[month].TotalShipment || 0);
-        
-                // ✅ 출고량 추이 차트 추가
-                new Chart(document.getElementById("shipmentChart"), {
-                    type: "bar",
-                    data: {
-                        labels: months,
-                        datasets: [{
-                            label: "출고량",
-                            data: totalShipments,
-                            backgroundColor: "rgba(0, 123, 255, 0.8)"
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
+        // 차트 초기화
+        function initializeCharts() {
+            const shipmentCtx = document.getElementById('shipmentTrendChart').getContext('2d');
+            new Chart(shipmentCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ months | tojson | safe }},
+                    datasets: [{
+                        label: '월별 출고량',
+                        data: {{ monthly_data | tojson | safe }},
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
                             title: {
                                 display: true,
-                                text: "출고량 추이"
+                                text: '출고량 (㎡)'
                             }
                         }
                     }
-                });
-        
-        // ✅ 출고 유형 포함 (DP + KD → 조달청)
-        const categoryData = { "대리점, 유통": [], "납품": [], "조달청": [], "공사": [] };
-        const categoryColors = {
-            "대리점, 유통": "rgba(255, 99, 132, 0.8)",
-            "납품": "rgba(54, 162, 235, 0.8)",
-            "조달청": "rgba(255, 206, 86, 0.8)",
-            "공사": "rgba(75, 192, 192, 0.8)"
-        };
+                }
+            });
 
-        months.forEach(month => {
-            Object.keys(categoryData).forEach(category => {
-                let percentage = 0;
-                if (data.shipment_trend[month].CategoryBreakdown) {
-                    for (const key in data.shipment_trend[month].CategoryBreakdown) {
-                        if (key === category) {
-                            percentage += data.shipment_trend[month].CategoryBreakdown[key].Percentage;
+            const typeCtx = document.getElementById('siteTypeChart').getContext('2d');
+            new Chart(typeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: {{ site_types | tojson | safe }},
+                    datasets: [{
+                        data: {{ site_type_counts | tojson | safe }},
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
                         }
                     }
                 }
-                categoryData[category].push(percentage || 0); // ✅ 0%라도 강제로 포함
             });
-        });
+        }
 
-        // ✅ 출고 유형별 비율 차트 (100% 스택형)
-        new Chart(document.getElementById("categoryPercentageChart"), {
-            type: "bar",
-            data: {
-                labels: months,
-                datasets: Object.keys(categoryData).map(category => ({
-                    label: category,
-                    data: categoryData[category],
-                    backgroundColor: categoryColors[category]
-                }))
-            },
-            options: {
-                responsive: true,
-                plugins: { 
-                    legend: { position: "top" },
-                    title: {
-                        display: true,
-                        text: "출고 유형별 비율"
-                    }
-                },
-                scales: {
-                    x: { stacked: true },
-                    y: { stacked: true, max: 100 }
-                }
+        // 현장 검색
+        function searchSite() {
+            const siteCode = document.getElementById('siteCode').value;
+            if (!siteCode) {
+                alert('현장코드를 입력하세요.');
+                return;
             }
-        });
-    });
+            window.location.href = `/result?site_code=${siteCode}`;
+        }
 
+        // 데이터 새로고침
+        function refreshData() {
+            location.reload();
+        }
 
+        // 페이지 로드 시 차트 초기화
+        document.addEventListener('DOMContentLoaded', initializeCharts);
     </script>
-
 </body>
 </html>
