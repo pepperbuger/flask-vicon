@@ -245,20 +245,14 @@ function initializeCharts() {
 
     // 주요 TG타입 월별 단가 차트
     const priceCtx = document.getElementById('priceChart').getContext('2d');
-    const priceData = {
-        labels: {{ data.get('months', []) | tojson | safe }},
-        datasets: [{
-            label: {{ data.get('main_tg_price_dataset', {}).get('label', '') | tojson | safe }},
-            data: {{ data.get('main_tg_price_dataset', {}).get('data', []) | tojson | safe }},
-            borderColor: {{ data.get('main_tg_price_dataset', {}).get('borderColor', 'rgb(54, 162, 235)') | tojson | safe }},
-            fill: false,
-            tension: 0.4
-        }]
-    };
-
+    const mainTgPriceDataset = {{ data.get('main_tg_price_dataset', {}) | tojson | safe }};
+    
     new Chart(priceCtx, {
         type: 'line',
-        data: priceData,
+        data: {
+            labels: {{ data.get('months', []) | tojson | safe }},
+            datasets: [mainTgPriceDataset]
+        },
         options: {
             responsive: true,
             scales: {
@@ -274,6 +268,20 @@ function initializeCharts() {
                 legend: {
                     display: true,
                     position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('ko-KR').format(context.parsed.y) + ' 원/㎡';
+                            }
+                            return label;
+                        }
+                    }
                 }
             }
         }
