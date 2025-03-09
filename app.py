@@ -360,9 +360,14 @@ ORDER BY m.Month DESC, c.CategoryShipment DESC;
 @app.route("/result")
 @login_required
 def result():
-    data = session.get("data", None)
-    if not data:
-        return jsonify({"error": "세션에 데이터가 없습니다. 다시 검색하세요."}), 400
+    site_code = request.args.get('site_code')
+    if not site_code:
+        return redirect(url_for('dashboard'))
+
+    # 현장 데이터 직접 조회
+    data = query_database(site_code)
+    if "error" in data:
+        return render_template("dashboard.html", error=data["error"])
 
     # 진행률 계산
     progress_data = calculate_project_progress(
@@ -379,6 +384,9 @@ def result():
         'total_shipment': progress_data['total_shipment'],
         'total_cost': progress_data['total_cost']
     })
+
+    # 세션에 데이터 저장 (엑셀 다운로드용)
+    session['data'] = data
 
     return render_template("result.html", data=data)
 

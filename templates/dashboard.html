@@ -183,8 +183,15 @@
                 alert('현장코드를 입력하세요.');
                 return;
             }
-            window.location.href = `/result?site_code=${siteCode}`;
+            window.location.href = `/result?site_code=${encodeURIComponent(siteCode)}`;
         }
+
+        // Enter 키 이벤트 처리
+        document.getElementById('siteCode').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchSite();
+            }
+        });
 
         // 데이터 새로고침
         function refreshData() {
