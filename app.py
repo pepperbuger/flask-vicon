@@ -174,42 +174,34 @@ def dashboard():
 
     try:
         with conn:
-            # 1. 총 현장 수
-            query_total_sites = """
-                SELECT COUNT(DISTINCT SiteCode) as total
-                FROM dbo.SiteInfo
+            # 1. 최근 업데이트된 월 조회
+            query_latest_month = """
+                SELECT TOP 1 Month
+                FROM dbo.ShipmentStatus
+                ORDER BY Month DESC
             """
-            df_total = pd.read_sql(query_total_sites, conn)
-            total_sites = int(df_total['total'].iloc[0])
+            df_latest = pd.read_sql(query_latest_month, conn)
+            latest_month = df_latest['Month'].iloc[0] if not df_latest.empty else "N/A"
 
-            # 2. 이번 달 출고량
-            query_monthly_shipment = """
+            # 2. 최근 월의 출고량
+            query_monthly_shipment = f"""
                 SELECT COALESCE(SUM(ShipmentQuantity), 0) as total_shipment
                 FROM dbo.ShipmentStatus
-                WHERE Month = FORMAT(GETDATE(), 'yyyy-MM')
+                WHERE Month = '{latest_month}'
             """
             df_monthly = pd.read_sql(query_monthly_shipment, conn)
             monthly_shipment = f"{int(df_monthly['total_shipment'].iloc[0]):,}"
 
             # 3. 평균 단가
-            query_avg_price = """
+            query_avg_price = f"""
                 SELECT COALESCE(AVG(CAST(Price AS float)), 0) as avg_price
                 FROM dbo.UnitPrice
-                WHERE Month = FORMAT(GETDATE(), 'yyyy-MM')
+                WHERE Month = '{latest_month}'
             """
             df_price = pd.read_sql(query_avg_price, conn)
             avg_price = f"{int(df_price['avg_price'].iloc[0]):,}"
 
-            # 4. 진행중인 현장 수
-            query_active_sites = """
-                SELECT COUNT(DISTINCT SiteCode) as active_count
-                FROM dbo.ShipmentStatus
-                WHERE Month = FORMAT(GETDATE(), 'yyyy-MM')
-            """
-            df_active = pd.read_sql(query_active_sites, conn)
-            active_sites = int(df_active['active_count'].iloc[0])
-
-            # 5. 월별 출고량 추이 (최근 12개월)
+            # 4. 월별 출고량 추이 (최근 12개월)
             query_monthly_trend = """
                 SELECT 
                     Month,
@@ -223,7 +215,7 @@ def dashboard():
             months = df_trend['Month'].tolist()
             monthly_data = df_trend['total_quantity'].tolist()
 
-            # 6. 현장 유형별 분포
+            # 5. 현장 유형별 분포
             query_site_types = """
                 SELECT 
                     CASE 
@@ -248,45 +240,14 @@ def dashboard():
             site_types = df_types['site_type'].tolist()
             site_type_counts = df_types['count'].tolist()
 
-            # 7. 최근 현장 목록
-            query_recent = """
-                SELECT TOP 5
-                    s.SiteCode,
-                    si.SiteName,
-                    si.Quantity,
-                    CAST(SUM(s.ShipmentQuantity) * 100.0 / si.Quantity as float) as progress
-                FROM dbo.ShipmentStatus s
-                JOIN dbo.SiteInfo si ON s.SiteCode = si.SiteCode
-                GROUP BY s.SiteCode, si.SiteName, si.Quantity
-                ORDER BY progress DESC
-            """
-            df_recent = pd.read_sql(query_recent, conn)
-            
-            recent_sites = []
-            for _, row in df_recent.iterrows():
-                progress = float(row['progress'])
-                status = '완료' if progress >= 80 else '진행중' if progress >= 50 else '초기'
-                status_class = 'bg-success' if progress >= 80 else 'bg-warning' if progress >= 50 else 'bg-info'
-                
-                recent_sites.append({
-                    'code': row['SiteCode'],
-                    'name': row['SiteName'],
-                    'quantity': f"{int(row['Quantity']):,}",
-                    'progress': f"{progress:.1f}",
-                    'status': status,
-                    'status_class': status_class
-                })
-
             return render_template("dashboard.html",
-                                total_sites=total_sites,
+                                latest_month=latest_month,
                                 monthly_shipment=monthly_shipment,
                                 avg_price=avg_price,
-                                active_sites=active_sites,
                                 months=months,
                                 monthly_data=monthly_data,
                                 site_types=site_types,
-                                site_type_counts=site_type_counts,
-                                recent_sites=recent_sites)
+                                site_type_counts=site_type_counts)
 
     except Exception as e:
         import traceback
@@ -294,15 +255,13 @@ def dashboard():
         print(f"❌ 대시보드 데이터 조회 오류: {error_message}")
         return render_template("dashboard.html", 
                             error="데이터 조회 중 오류가 발생했습니다.",
-                            total_sites=0,
+                            latest_month="N/A",
                             monthly_shipment="0",
                             avg_price="0",
-                            active_sites=0,
                             months=[],
                             monthly_data=[],
                             site_types=[],
-                            site_type_counts=[],
-                            recent_sites=[])
+                            site_type_counts=[])
 
     finally:
         if conn:

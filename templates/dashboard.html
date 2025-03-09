@@ -69,35 +69,19 @@
 
     <!-- 요약 통계 -->
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-md-6">
             <div class="card summary-card">
                 <div class="card-body text-center">
-                    <div class="stat-label">총 현장 수</div>
-                    <div class="stat-value text-primary">{{ total_sites }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card summary-card">
-                <div class="card-body text-center">
-                    <div class="stat-label">이번 달 출고량</div>
+                    <div class="stat-label">{{ latest_month }} 출고량</div>
                     <div class="stat-value text-success">{{ monthly_shipment }} ㎡</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-6">
             <div class="card summary-card">
                 <div class="card-body text-center">
                     <div class="stat-label">평균 단가</div>
                     <div class="stat-value text-info">{{ avg_price }} 원/㎡</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card summary-card">
-                <div class="card-body text-center">
-                    <div class="stat-label">진행중인 현장</div>
-                    <div class="stat-value text-warning">{{ active_sites }}</div>
                 </div>
             </div>
         </div>
@@ -110,7 +94,7 @@
                 <div class="card-body">
                     <h5 class="card-title">월별 출고량 추이</h5>
                     <div class="chart-container">
-                        <canvas id="shipmentTrendChart"></canvas>
+                        <canvas id="shipmentChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -127,55 +111,10 @@
         </div>
     </div>
 
-    <!-- 최근 현장 목록 -->
-    <div class="card mt-4">
-        <div class="card-body">
-            <h5 class="card-title">📋 최근 현장 목록</h5>
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>현장코드</th>
-                            <th>현장명</th>
-                            <th>계약물량</th>
-                            <th>진행률</th>
-                            <th>상태</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for site in recent_sites %}
-                        <tr>
-                            <td>{{ site.code }}</td>
-                            <td>{{ site.name }}</td>
-                            <td>{{ site.quantity }} ㎡</td>
-                            <td>
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar" role="progressbar" 
-                                         style="width: {{ site.progress }}%"
-                                         aria-valuenow="{{ site.progress }}" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="100">
-                                        {{ site.progress }}%
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge {{ site.status_class }}">
-                                    {{ site.status }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <script>
         // 차트 초기화
         function initializeCharts() {
-            const shipmentCtx = document.getElementById('shipmentTrendChart').getContext('2d');
+            const shipmentCtx = document.getElementById('shipmentChart').getContext('2d');
             new Chart(shipmentCtx, {
                 type: 'bar',
                 data: {
