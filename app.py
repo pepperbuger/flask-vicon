@@ -615,24 +615,22 @@ def download_excel():
             df_submaterial = df_submaterial.rename(columns={
                 "SubmaterialType": "타입",
                 "TotalQuantity": "수량",
-                "AvgPrice": "단가 (원)",
                 "TotalAmount": "금액 (원)",
+                "AvgPrice": "단가 (원)",
                 "StartMonth": "구매시작월",
                 "EndMonth": "구매종료월"
             })
-
-            df_submaterial.to_excel(writer, sheet_name="부자재비", index=False)
 
             # ✅ 소계 추가
             submaterial_total = {
                 "타입": "소계",
                 "수량": df_submaterial["수량"].sum(),
-                "단가 (원)": "-",
                 "금액 (원)": df_submaterial["금액 (원)"].sum(),
+                "단가 (원)": "-",
                 "구매시작월": "-",
                 "구매종료월": "-"
             }
-            df_submaterial = df_submaterial.append(submaterial_total, ignore_index=True)
+            df_submaterial = pd.concat([df_submaterial, pd.DataFrame([submaterial_total])], ignore_index=True)
 
             df_submaterial.to_excel(writer, sheet_name="부자재비", index=False)
 
