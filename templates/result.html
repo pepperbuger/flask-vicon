@@ -129,8 +129,8 @@
         <thead>
             <tr>
                 <th>타입</th>
-                <th>수량</th>
                 <th>금액 (원)</th>
+                <th>수량</th>
                 <th>단가 (원)</th>
                 <th>구매시작월</th>
                 <th>구매종료월</th>
@@ -140,8 +140,8 @@
             {% for row in data.get("submaterial", []) %}
             <tr>
                 <td>{{ row.get("SubmaterialType", "-") }}</td>
-                <td>{{ "{:,.0f}".format(row.get("TotalQuantity", 0)) }}</td>
                 <td>{{ "{:,.0f}".format(row.get("TotalAmount", 0)) }}</td>
+                <td>{{ "{:,.0f}".format(row.get("TotalQuantity", 0)) }}</td>
                 <td>{{ "{:,.0f}".format(row.get("AvgPrice", 0)) }}</td>
                 <td>{{ row.get("StartMonth", "-") }}</td>
                 <td>{{ row.get("EndMonth", "-") }}</td>
@@ -151,8 +151,8 @@
         <tfoot>
             <tr>
                 <td><strong>소계</strong></td>
-                <td>{{ "{:,.0f}".format(data.get("submaterial_total", {}).get("total_quantity", 0)) }}</td>
                 <td>{{ "{:,.0f}".format(data.get("submaterial_total", {}).get("total_amount", 0)) }}</td>
+                <td>{{ "{:,.0f}".format(data.get("submaterial_total", {}).get("total_quantity", 0)) }}</td>
                 <td>-</td>
                 <td>{{ data.get("submaterial_total", {}).get("start_month", "-") }}</td>
                 <td>{{ data.get("submaterial_total", {}).get("end_month", "-") }}</td>

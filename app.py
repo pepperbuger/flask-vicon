@@ -614,18 +614,21 @@ def download_excel():
             df_submaterial = pd.DataFrame(data["submaterial"])
             df_submaterial = df_submaterial.rename(columns={
                 "SubmaterialType": "타입",
-                "TotalQuantity": "수량",
                 "TotalAmount": "금액 (원)",
+                "TotalQuantity": "수량",
                 "AvgPrice": "단가 (원)",
                 "StartMonth": "구매시작월",
                 "EndMonth": "구매종료월"
             })
 
+            # 열 순서 재정렬
+            df_submaterial = df_submaterial[["타입", "금액 (원)", "수량", "단가 (원)", "구매시작월", "구매종료월"]]
+
             # ✅ 소계 추가
             submaterial_total = {
                 "타입": "소계",
-                "수량": df_submaterial["수량"].sum(),
                 "금액 (원)": df_submaterial["금액 (원)"].sum(),
+                "수량": df_submaterial["수량"].sum(),
                 "단가 (원)": "-",
                 "구매시작월": "-",
                 "구매종료월": "-"
