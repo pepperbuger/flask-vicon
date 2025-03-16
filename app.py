@@ -614,8 +614,8 @@ def download_excel():
             df_submaterial = pd.DataFrame(data["submaterial"])
             df_submaterial = df_submaterial.rename(columns={
                 "SubmaterialType": "타입",
-                "TotalQuantity": "수량",
-                "TotalAmount": "금액 (원)",
+                "TotalAmount": "수량",
+                "TotalQuantity": "금액 (원)",
                 "AvgPrice": "단가 (원)",
                 "StartMonth": "구매시작월",
                 "EndMonth": "구매종료월"
